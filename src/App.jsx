@@ -808,28 +808,13 @@ function AIFeedback({ user, goals, goalsCatalog, lifeEvents }) {
   const attnGoals = goals.filter(g => ["NEEDS_ATTENTION","OFF_TRACK"].includes(goalStatus(g.completion)));
   const goodGoals = goals.filter(g => ["ON_TRACK","COMPLETED"].includes(goalStatus(g.completion)));
 
-  // Radar data for skill dimensions
+  // Radar data for skill dimensions - show as horizontal bar for better readability
   const radarData = goals.map(g => {
     const def = goalsCatalog.find(c => c.id === g.goalId);
-    return { subject: def?.title?.split(" ").slice(0, 2).join(" ") || "Goal", score: g.completion, fullMark: 100 };
+    return { subject: def?.title?.length > 20 ? def.title.slice(0, 20) + "..." : def?.title || "Goal", score: g.completion, fullMark: 100, fullTitle: def?.title };
   });
 
-  if (!loaded) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <TopBar title="AI Feedback" sub="Generating personalized insights…" />
-        <Page>
-          <Card style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 280, flexDirection: "column", gap: 16 }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: "flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s ease-in-out infinite" }}>
-              <Brain size={26} color="#fff" />
-            </div>
-            <div style={{ color: C.textMuted, fontSize: 14 }}>Analyzing {goals.length} goals, weightages, and performance trajectory…</div>
-          </Card>
-        </Page>
-      </div>
-    );
-  }
-
+  // Use horizontal bar chart for skill display (values on X-axis)
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <TopBar title="AI Feedback" sub="Personalized recommendations based on your performance data" />
@@ -922,14 +907,15 @@ function AIFeedback({ user, goals, goalsCatalog, lifeEvents }) {
           </Card>
 
           <Card>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Skill Radar</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Skill Distribution</div>
             <ResponsiveContainer width="100%" height={220}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke={C.border} />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: C.textMuted }} />
-                <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9, fill: C.textSub }} />
-                <Radar dataKey="score" stroke={C.accent} fill={C.accent} fillOpacity={0.2} />
-              </RadarChart>
+              <BarChart data={radarData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} stroke={C.textMuted} tick={{ fontSize: 10 }} />
+                <YAxis type="category" dataKey="subject" stroke={C.textMuted} tick={{ fontSize: 9 }} width={80} />
+                <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }} cursor={{ fill: C.surface }} />
+                <Bar dataKey="score" fill={C.accent} radius={[0, 4, 4, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </Card>
         </div>
@@ -943,10 +929,11 @@ function MyRating({ user, goals, lifeEvents, goalsCatalog }) {
   const label = adjusted >= 90 ? "Exceptional" : adjusted >= 75 ? "Strong" : adjusted >= 60 ? "Meets Expectations" : adjusted >= 40 ? "Developing" : "Needs Improvement";
   const rc = adjusted >= 75 ? C.success : adjusted >= 50 ? C.warning : C.danger;
   const totalWeight = goals.reduce((s, g) => s + g.weight, 0) || 1;
+  // Rating periods in reverse chronology (newest first)
   const periods = [
-    { name: "H1 2024", raw: 72.4, adj: 72.4, isAdj: false },
-    { name: "H2 2024", raw: 68.8, adj: 71.2, isAdj: true },
     { name: "H1 2025", raw, adj: adjusted, isAdj: isAdjusted, current: true },
+    { name: "H2 2024", raw: 68.8, adj: 71.2, isAdj: true },
+    { name: "H1 2024", raw: 72.4, adj: 72.4, isAdj: false },
   ];
 
   return (
@@ -1326,35 +1313,71 @@ function MgrGoalMgmt({ user, allUsers, empGoals, goalsCatalog, setGoalsCatalog, 
   const team = allUsers.filter(u => u.managerId === user.id);
   const allGoalIds = new Set();
   team.forEach(m => (empGoals[m.id] || []).forEach(g => allGoalIds.add(g.goalId)));
-  const unique = goalsCatalog.filter(g => allGoalIds.has(g.id));
+  
+  // Include both: goals assigned to team AND custom goals added by manager
+  const managerAddedGoalIds = new Set(
+    goalsCatalog.filter(g => g.addedBy === user.id).map(g => g.id)
+  );
+  
+  const unique = goalsCatalog.filter(g => allGoalIds.has(g.id) || managerAddedGoalIds.has(g.id));
   const [addModal, setAddModal] = useState(false);
   const [form, setForm] = useState({ title: "", category: "", defaultWeight: "" });
 
   function handleAdd() {
     if (!form.title) return;
-    const ng = { id: genId("g"), title: form.title, category: form.category || "Custom", defaultWeight: parseInt(form.defaultWeight) || 10 };
+    const ng = { id: genId("g"), title: form.title, category: form.category || "Custom", defaultWeight: parseInt(form.defaultWeight) || 10, addedBy: user.id, isCustom: true };
     setGoalsCatalog(prev => [...prev, ng]);
     showToast(`Goal "${ng.title}" added to catalog`);
     setAddModal(false); setForm({ title: "", category: "", defaultWeight: "" });
   }
 
+  // Separate custom goals from org goals
+  const customGoals = unique.filter(g => g.isCustom || g.addedBy === user.id);
+  const orgGoals = unique.filter(g => !g.isCustom && g.addedBy !== user.id);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <TopBar title="Goal Management" sub={`${unique.length} unique goals across your team of ${team.length}`} actions={<Button onClick={() => setAddModal(true)}><Plus size={14} /> Add Custom Goal</Button>} />
       <Page>
-        <div style={{ fontSize: 12, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontWeight: 700 }}>Unique Goals (Union across team)</div>
-        {unique.length === 0 ? (
-          <EmptyState icon={Target} text="No goals assigned to your team yet." />
-        ) : unique.map(g => (
-          <Card key={g.id} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Target size={16} color={C.accent} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{g.title}</div>
-              <div style={{ fontSize: 11, color: C.textMuted }}>Category: {g.category} · Default weight: {g.defaultWeight}% · Assigned to: {team.filter(m => (empGoals[m.id] || []).some(eg => eg.goalId === g.id)).map(m => m.name.split(" ")[0]).join(", ")}</div>
+        {/* Custom Goals Section - Always visible when manager has added goals */}
+        {customGoals.length > 0 && (
+          <>
+            <div style={{ fontSize: 12, color: C.purple, textTransform: "uppercase", letterSpacing: 0.8, fontWeight: 700, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+              <Zap size={12} /> Your Custom Goals
             </div>
-            <Badge color={C.accent}>ORG</Badge>
-          </Card>
-        ))}
+            {customGoals.map(g => (
+              <Card key={g.id} style={{ display: "flex", alignItems: "center", gap: 14, borderColor: C.purple + "33" }}>
+                <Target size={16} color={C.purple} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{g.title}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>Category: {g.category} · Default weight: {g.defaultWeight}% · Assigned to: {team.filter(m => (empGoals[m.id] || []).some(eg => eg.goalId === g.id)).length > 0 ? team.filter(m => (empGoals[m.id] || []).some(eg => eg.goalId === g.id)).map(m => m.name.split(" ")[0]).join(", ") : "Not yet assigned"}</div>
+                </div>
+                <Badge color={C.purple}>CUSTOM</Badge>
+              </Card>
+            ))}
+          </>
+        )}
+        
+        {/* Org Goals Section */}
+        {orgGoals.length > 0 && (
+          <>
+            <div style={{ fontSize: 12, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontWeight: 700, marginBottom: 10, marginTop: customGoals.length > 0 ? 20 : 0 }}>Organization Goals</div>
+            {orgGoals.map(g => (
+              <Card key={g.id} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <Target size={16} color={C.accent} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{g.title}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>Category: {g.category} · Default weight: {g.defaultWeight}% · Assigned to: {team.filter(m => (empGoals[m.id] || []).some(eg => eg.goalId === g.id)).map(m => m.name.split(" ")[0]).join(", ")}</div>
+                </div>
+                <Badge color={C.accent}>ORG</Badge>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {unique.length === 0 && (
+          <EmptyState icon={Target} text="No goals in catalog yet. Add your first custom goal!" />
+        )}
       </Page>
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Add Custom Goal">
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1543,6 +1566,7 @@ function AdminDashboard({ allUsers, empGoals, lifeEvents, goalsCatalog, groups, 
   const activeGoals = Object.values(empGoals).flat().length;
   const completedGoals = Object.values(empGoals).flat().filter(g => goalStatus(g.completion) === "COMPLETED").length;
   const pendingApprovals = approvals.length;
+  const [drillDownDept, setDrillDownDept] = useState(null);
 
   const deptMap = {};
   employees.forEach(e => {
@@ -1562,6 +1586,9 @@ function AdminDashboard({ allUsers, empGoals, lifeEvents, goalsCatalog, groups, 
   });
   const orgAvg = allRatings.length > 0 ? (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1) : 0;
 
+  // Get employees in the drilled-down department
+  const drillDownEmployees = drillDownDept ? employees.filter(e => (e.dept || "Other") === drillDownDept) : [];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <TopBar title="Organization Dashboard" sub="PerformIQ · H1 2025 Overview" />
@@ -1569,23 +1596,56 @@ function AdminDashboard({ allUsers, empGoals, lifeEvents, goalsCatalog, groups, 
         <StatCard label="Total Employees" value={employees.length} sub={`${managers.length} managers`} icon={Users} color={C.accent} onClick={() => setPage("users")} />
         <StatCard label="Org Avg Rating" value={`${orgAvg}%`} icon={TrendingUp} color={parseFloat(orgAvg) >= 70 ? C.success : C.warning} onClick={() => setPage("reports")} />
         <StatCard label="Active Goals" value={activeGoals} sub={`${completedGoals} completed`} icon={Target} color={C.purple} onClick={() => setPage("goals")} />
-        <StatCard label="Pending Actions" value={pendingApprovals} sub={pendingApprovals > 0 ? "Requires attention" : "All clear"} icon={Clock} color={C.warning} />
+        <StatCard label="Pending Actions" value={pendingApprovals} sub={pendingApprovals > 0 ? "Requires attention" : "All clear"} icon={Clock} color={C.warning} onClick={() => setPage("users")} />
       </div>
-      <div style={{ padding: "0 32px", display: "grid", gridTemplateColumns: "3fr 2fr", gap: 16 }}>
-        <Card>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Department Performance</div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={deptData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-              <XAxis type="number" domain={[0, 100]} stroke={C.textMuted} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="dept" stroke={C.textMuted} tick={{ fontSize: 10 }} width={100} />
-              <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="avg" name="Avg Rating" radius={[0, 5, 5, 0]}>
-                {deptData.map((d, i) => <Cell key={i} fill={d.avg >= 75 ? C.success : d.avg >= 60 ? C.warning : C.danger} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+      <div style={{ padding: "0 32px", display: "grid", gridTemplateColumns: drillDownDept ? "1fr" : "3fr 2fr", gap: 16 }}>
+        {!drillDownDept ? (
+          <Card>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Department Performance</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={deptData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis type="number" domain={[0, 100]} stroke={C.textMuted} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="dept" stroke={C.textMuted} tick={{ fontSize: 10 }} width={100} />
+                <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="avg" name="Avg Rating" radius={[0, 5, 5, 0]} cursor="pointer" onClick={(d) => setDrillDownDept(d.dept)}>
+                  {deptData.map((d, i) => <Cell key={i} fill={d.avg >= 75 ? C.success : d.avg >= 60 ? C.warning : C.danger} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ fontSize: 11, color: C.textSub, textAlign: "center", marginTop: 6 }}>Click a bar to drill down by department</div>
+          </Card>
+        ) : (
+          <Card>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <Button size="sm" variant="ghost" onClick={() => setDrillDownDept(null)}><ChevronLeft size={14} /> Back</Button>
+              <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{drillDownDept} Department</span>
+            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                  {["Employee","Rating","Goals"].map(h => (
+                    <th key={h} style={{ textAlign: "left", padding: "8px 12px", color: C.textMuted, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {drillDownEmployees.map(e => {
+                  const g = empGoals[e.id] || [];
+                  const le = lifeEvents[e.id] || [];
+                  const { adjusted } = computeRating(g, le);
+                  return (
+                    <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}22` }}>
+                      <td style={{ padding: "10px 12px", color: C.text, fontWeight: 600 }}>{e.name}</td>
+                      <td style={{ padding: "10px 12px" }}><span style={{ color: adjusted >= 75 ? C.success : adjusted >= 50 ? C.warning : C.danger, fontWeight: 800 }}>{adjusted}%</span></td>
+                      <td style={{ padding: "10px 12px", color: C.textMuted }}>{g.length}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
+        )}
         <Card>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Org Health</div>
           {[
@@ -1651,6 +1711,12 @@ function UserManagement({ allUsers, setAllUsers, groups, showToast }) {
     setDeleteConfirm(null);
   }
 
+  function handleToggleStatus(u) {
+    const newStatus = u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setAllUsers(prev => prev.map(user => user.id === u.id ? { ...user, status: newStatus } : user));
+    showToast(`User "${u.name}" ${newStatus === "ACTIVE" ? "activated" : "deactivated"}`);
+  }
+
   function openEdit(u) {
     setForm({ name: u.name, email: u.email, role: u.role, managerId: u.managerId || "", group: u.group || "" });
     setEditModal(u);
@@ -1694,11 +1760,28 @@ function UserManagement({ allUsers, setAllUsers, groups, showToast }) {
                   <td style={{ padding: "10px 12px" }}><Badge color={roleColor[u.role]}>{u.role}</Badge></td>
                   <td style={{ padding: "10px 12px", color: C.textMuted }}>{allUsers.find(m => m.id === u.managerId)?.name || "—"}</td>
                   <td style={{ padding: "10px 12px", color: C.textMuted }}>{u.group || "—"}</td>
-                  <td style={{ padding: "10px 12px" }}><Badge color={u.status === "ACTIVE" ? C.success : C.danger}>{u.status}</Badge></td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <button 
+                      onClick={() => handleToggleStatus(u)}
+                      style={{ 
+                        background: u.status === "ACTIVE" ? C.success + "20" : C.danger + "20", 
+                        border: `1px solid ${u.status === "ACTIVE" ? C.success + "44" : C.danger + "44"}`, 
+                        borderRadius: 6, 
+                        padding: "4px 10px", 
+                        fontSize: 11, 
+                        fontWeight: 600, 
+                        color: u.status === "ACTIVE" ? C.success : C.danger, 
+                        cursor: "pointer",
+                        fontFamily: "inherit"
+                      }}
+                    >
+                      {u.status}
+                    </button>
+                  </td>
                   <td style={{ padding: "10px 12px" }}>
                     <div style={{ display: "flex", gap: 4 }}>
                       <Button size="sm" variant="ghost" onClick={() => openEdit(u)}><Edit size={12} /></Button>
-                      {u.status === "ACTIVE" && u.role !== "ADMIN" && <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm(u)}><Trash2 size={12} color={C.danger} /></Button>}
+                      {u.role !== "ADMIN" && <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm(u)}><Trash2 size={12} color={C.danger} /></Button>}
                     </div>
                   </td>
                 </tr>
@@ -1820,6 +1903,9 @@ function RatingPeriods({ periods, setPeriods, showToast }) {
   const [form, setForm] = useState({ name: "", start: "", end: "" });
   const [error, setError] = useState("");
 
+  // Sort periods in reverse chronology (newest first)
+  const sortedPeriods = [...periods].sort((a, b) => new Date(b.start) - new Date(a.start));
+
   function resetForm() { setForm({ name: "", start: "", end: "" }); setError(""); }
 
   function validate(isEdit = false) {
@@ -1859,9 +1945,9 @@ function RatingPeriods({ periods, setPeriods, showToast }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <TopBar title="Rating Periods" sub="Define evaluation time windows" actions={<Button onClick={() => { resetForm(); setAddModal(true); }}><Plus size={14} /> Add Period</Button>} />
       <Page>
-        {periods.length === 0 ? (
+        {sortedPeriods.length === 0 ? (
           <EmptyState icon={Calendar} text="No rating periods configured." action={<Button onClick={() => { resetForm(); setAddModal(true); }}>Create First Period</Button>} />
-        ) : periods.map(p => (
+        ) : sortedPeriods.map(p => (
           <Card key={p.id} style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ width: 42, height: 42, borderRadius: 11, background: p.isActive ? C.successDim : C.surface, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Calendar size={18} color={p.isActive ? C.success : C.textMuted} />
