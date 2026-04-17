@@ -11,14 +11,13 @@ import {
   Zap, Shield, Activity, Award, Calendar, Filter, Download,
   User, Briefcase, Home, Search, MoreVertical, ArrowUp, ArrowDown,
   Brain, Heart, Layers, PieChart as PieIcon, RefreshCw, Edit, Trash2,
-  Link as LinkIcon, Unlink, ArrowRight, Info, Copy, Hash, Percent, Mail,
-  ToggleLeft, ToggleRight, ChevronLeft, Sun, Moon
+  Link, Unlink, ArrowRight, Info, Copy, Hash, Percent, Mail
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   DESIGN TOKENS — DARK + LIGHT themes
+   DESIGN TOKENS
    ═══════════════════════════════════════════════════════════════════════════════ */
-const DARK = {
+const C = {
   bg: "#0a0f1e", sidebar: "#0d1528", sidebarHover: "#162040",
   card: "#111827", cardBorder: "#1e2d4a", surface: "#162040",
   accent: "#3b82f6", accentHover: "#60a5fa", accentDim: "#1e3a5f",
@@ -30,21 +29,6 @@ const DARK = {
   text: "#f1f5f9", textMuted: "#94a3b8", textSub: "#475569",
   border: "#1e293b",
 };
-
-const LIGHT = {
-  bg: "#f0f2f5", sidebar: "#ffffff", sidebarHover: "#f3f4f6",
-  card: "#ffffff", cardBorder: "#e2e8f0", surface: "#f8fafc",
-  accent: "#2563eb", accentHover: "#3b82f6", accentDim: "#dbeafe",
-  success: "#059669", successDim: "#d1fae5",
-  warning: "#d97706", warningDim: "#fef3c7",
-  danger: "#dc2626", dangerDim: "#fee2e2",
-  purple: "#7c3aed", purpleDim: "#ede9fe",
-  cyan: "#0891b2", cyanDim: "#cffafe",
-  text: "#0f172a", textMuted: "#64748b", textSub: "#94a3b8",
-  border: "#e2e8f0",
-};
-
-const C = { ...DARK };
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    SEED DATA — Single source of truth, mutable via setState at top level
@@ -175,13 +159,8 @@ function statusBg(s) {
 }
 
 function teamHealthColor(goals) {
-  if (!goals || goals.length === 0) return "YELLOW";
-  const hasOff = goals.some(g => goalStatus(g.completion) === "OFF_TRACK");
-  const hasAttn = goals.some(g => goalStatus(g.completion) === "NEEDS_ATTENTION");
-  const tw = goals.reduce((s, g) => s + g.weight, 0) || 1;
-  const avg = goals.reduce((s, g) => s + g.completion * g.weight / tw, 0);
-  if (hasOff || avg < 60) return "RED";
-  if (hasAttn || avg < 75) return "YELLOW";
+  if (goals.some(g => goalStatus(g.completion) === "OFF_TRACK")) return "RED";
+  if (goals.some(g => goalStatus(g.completion) === "NEEDS_ATTENTION")) return "YELLOW";
   return "GREEN";
 }
 
@@ -190,7 +169,6 @@ function genId(prefix = "x") { return prefix + Date.now() + Math.random().toStri
 function formatDate(d) { if (!d) return "—"; const dt = new Date(d); return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
 
 function daysLeft(d) { const diff = Math.ceil((new Date(d) - new Date()) / 86400000); return diff; }
-function isOverdue(dueDate, completion) { return daysLeft(dueDate) < 0 && completion < 100; }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    UI PRIMITIVES
@@ -361,12 +339,11 @@ const NAV = {
     { id: "goals", label: "Goal Management", icon: Target },
     { id: "periods", label: "Rating Periods", icon: Calendar },
     { id: "groups", label: "Groups", icon: Layers },
-    { id: "approvals", label: "Approvals", icon: CheckCircle },
     { id: "reports", label: "Org Report", icon: BarChart2 },
   ],
 };
 
-function Sidebar({ user, page, setPage, onLogout, approvalCount, isDark, onToggleTheme }) {
+function Sidebar({ user, page, setPage, onLogout, approvalCount }) {
   const nav = NAV[user.role];
   const rc = { EMPLOYEE: C.success, MANAGER: C.accent, ADMIN: C.purple }[user.role];
   return (
@@ -407,20 +384,7 @@ function Sidebar({ user, page, setPage, onLogout, approvalCount, isDark, onToggl
           );
         })}
       </nav>
-      <div style={{ padding: "6px 10px", borderTop: `1px solid ${C.border}` }}>
-        <button onClick={onToggleTheme} style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
-          background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer",
-          color: C.textMuted, width: "100%", textAlign: "left", fontSize: 13, fontFamily: "inherit", transition: "all 0.2s"
-        }}>
-          {isDark ? <Moon size={17} color={C.purple} /> : <Sun size={17} color={C.warning} />}
-          <span style={{ flex: 1 }}>{isDark ? "Dark Mode" : "Light Mode"}</span>
-          <div style={{ width: 32, height: 18, borderRadius: 99, background: isDark ? C.textSub : C.accent, padding: 2, transition: "all 0.3s", display: "flex", alignItems: "center", justifyContent: isDark ? "flex-start" : "flex-end" }}>
-            <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", transition: "all 0.3s" }} />
-          </div>
-        </button>
-      </div>
-      <div style={{ padding: "6px 10px 10px" }}>
+      <div style={{ padding: "10px 10px", borderTop: `1px solid ${C.border}` }}>
         <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", color: C.textMuted, width: "100%", textAlign: "left", fontSize: 13, fontFamily: "inherit" }}>
           <LogOut size={17} /> Sign Out
         </button>
@@ -448,7 +412,7 @@ function Page({ children }) {
 /* ═══════════════════════════════════════════════════════════════════════════════
    LOGIN
    ═══════════════════════════════════════════════════════════════════════════════ */
-function LoginPage({ onLogin, isDark, onToggleTheme }) {
+function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("emp1@demo.com");
   const [password, setPassword] = useState("Demo1234!");
   const [error, setError] = useState("");
@@ -472,21 +436,16 @@ function LoginPage({ onLogin, isDark, onToggleTheme }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI', system-ui, sans-serif", transition: "background 0.3s" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: ${C.bg}; transition: background 0.3s; }
+        body { background: ${C.bg}; }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: ${C.bg}; } ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
-        input, select, textarea { color-scheme: ${isDark ? "dark" : "light"}; }
+        input, select, textarea { color-scheme: dark; }
         @keyframes slideIn { from { transform: translateX(100px); opacity:0 } to { transform: translateX(0); opacity:1 } }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.95)} }
-        button:hover:not(:disabled) { filter: brightness(${isDark ? "1.08" : "0.95"}); }
+        button:hover:not(:disabled) { filter: brightness(1.08); }
       `}</style>
-      {/* Theme toggle top-right */}
-      <button onClick={onToggleTheme} style={{ position: "fixed", top: 20, right: 20, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: C.textMuted, fontSize: 12, fontWeight: 600, fontFamily: "inherit", zIndex: 10 }}>
-        {isDark ? <Moon size={15} color={C.purple} /> : <Sun size={15} color={C.warning} />}
-        {isDark ? "Dark" : "Light"}
-      </button>
       <div style={{ width: "100%", maxWidth: 420, padding: 24 }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{ width: 60, height: 60, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", boxShadow: `0 0 40px ${C.accent}33` }}>
@@ -535,7 +494,6 @@ function EmpDashboard({ user, goals, lifeEvents, goalsCatalog, setPage }) {
 
   const upcomingDue = goals.filter(g => goalStatus(g.completion) !== "COMPLETED").sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   const urgentGoals = upcomingDue.filter(g => daysLeft(g.dueDate) <= 30 && daysLeft(g.dueDate) > 0);
-  const overdueGoals = goals.filter(g => isOverdue(g.dueDate, g.completion));
 
   const progressData = [
     { month: "Jan", score: 35 }, { month: "Feb", score: 44 }, { month: "Mar", score: 55 }, { month: "Apr", score: adjusted },
@@ -556,14 +514,6 @@ function EmpDashboard({ user, goals, lifeEvents, goalsCatalog, setPage }) {
         <div style={{ margin: "0 32px", background: C.accentDim, border: `1px solid ${C.accent}33`, borderRadius: 12, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10 }}>
           <Heart size={15} color={C.accent} />
           <span style={{ fontSize: 13, color: C.accent }}>Empathy adjustment active — {approvedEvts} approved life event(s) factored into rating ({raw}% → {adjusted}%)</span>
-        </div>
-      )}
-
-      {overdueGoals.length > 0 && (
-        <div style={{ margin: "0 32px", background: C.dangerDim, border: `1px solid ${C.danger}33`, borderRadius: 12, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setPage("goals")}>
-          <AlertCircle size={15} color={C.danger} />
-          <span style={{ fontSize: 13, color: C.danger }}>{overdueGoals.length} goal(s) past due date — update progress or request an extension</span>
-          <ChevronRight size={14} color={C.danger} style={{ marginLeft: "auto" }} />
         </div>
       )}
 
@@ -699,17 +649,15 @@ function MyGoals({ user, goals, setGoals, goalsCatalog, showToast }) {
   function GoalCard({ goal }) {
     const def = goalsCatalog.find(c => c.id === goal.goalId);
     const st = goalStatus(goal.completion);
-    const sColor = statusColor(st);
+    const sc = statusColor(st);
     const open = expanded[goal.id];
     const dl = daysLeft(goal.dueDate);
-    const overdue = isOverdue(goal.dueDate, goal.completion);
     return (
-      <div style={{ background: C.surface, border: `1px solid ${overdue ? C.danger + "55" : sColor + "22"}`, borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: C.surface, border: `1px solid ${sc}22`, borderRadius: 12, overflow: "hidden" }}>
         <div style={{ padding: "14px 18px", cursor: "pointer" }} onClick={() => setExpanded(e => ({ ...e, [goal.id]: !e[goal.id] }))}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-              <Badge color={sColor}>{st.replace(/_/g, " ")}</Badge>
-              {overdue && <Badge color={C.danger}>OVERDUE</Badge>}
+              <Badge color={sc}>{st.replace(/_/g, " ")}</Badge>
               <span style={{ fontSize: 13, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def?.title}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
@@ -719,8 +667,8 @@ function MyGoals({ user, goals, setGoals, goalsCatalog, showToast }) {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ flex: 1 }}><ProgressBar value={goal.completion} color={sColor} /></div>
-            <span style={{ fontSize: 14, fontWeight: 800, color: sColor, minWidth: 36, textAlign: "right" }}>{goal.completion}%</span>
+            <div style={{ flex: 1 }}><ProgressBar value={goal.completion} color={sc} /></div>
+            <span style={{ fontSize: 14, fontWeight: 800, color: sc, minWidth: 36, textAlign: "right" }}>{goal.completion}%</span>
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 5 }}>Due: {formatDate(goal.dueDate)} · Category: {def?.category} · Contributes: {(goal.completion * goal.weight / (totalWeight || 1)).toFixed(1)} pts</div>
         </div>
@@ -860,6 +808,7 @@ function AIFeedback({ user, goals, goalsCatalog, lifeEvents }) {
   const attnGoals = goals.filter(g => ["NEEDS_ATTENTION","OFF_TRACK"].includes(goalStatus(g.completion)));
   const goodGoals = goals.filter(g => ["ON_TRACK","COMPLETED"].includes(goalStatus(g.completion)));
 
+  // Radar data for skill dimensions
   const radarData = goals.map(g => {
     const def = goalsCatalog.find(c => c.id === g.goalId);
     return { subject: def?.title?.split(" ").slice(0, 2).join(" ") || "Goal", score: g.completion, fullMark: 100 };
@@ -974,13 +923,12 @@ function AIFeedback({ user, goals, goalsCatalog, lifeEvents }) {
 
           <Card>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Skill Radar</div>
-            <ResponsiveContainer width="100%" height={280}>
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="68%">
-                <PolarGrid stroke={C.border} strokeWidth={1} gridType="polygon" strokeOpacity={0.6} />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: C.textMuted, fontWeight: 500 }} />
-                <PolarRadiusAxis domain={[0, 100]} tickCount={5} tick={{ fontSize: 9, fill: C.textSub }} angle={90} axisLine={false} />
-                <Radar dataKey="score" stroke={C.accent} fill={C.accent} fillOpacity={0.2} strokeWidth={2} dot={{ r: 3, fill: C.accent, strokeWidth: 0 }} />
-                <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }} formatter={(v) => [`${v}%`, "Completion"]} />
+            <ResponsiveContainer width="100%" height={220}>
+              <RadarChart data={radarData}>
+                <PolarGrid stroke={C.border} />
+                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: C.textMuted }} />
+                <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9, fill: C.textSub }} />
+                <Radar dataKey="score" stroke={C.accent} fill={C.accent} fillOpacity={0.2} />
               </RadarChart>
             </ResponsiveContainer>
           </Card>
@@ -996,9 +944,9 @@ function MyRating({ user, goals, lifeEvents, goalsCatalog }) {
   const rc = adjusted >= 75 ? C.success : adjusted >= 50 ? C.warning : C.danger;
   const totalWeight = goals.reduce((s, g) => s + g.weight, 0) || 1;
   const periods = [
-    { name: "H1 2025", raw, adj: adjusted, isAdj: isAdjusted, current: true },
-    { name: "H2 2024", raw: 68.8, adj: 71.2, isAdj: true },
     { name: "H1 2024", raw: 72.4, adj: 72.4, isAdj: false },
+    { name: "H2 2024", raw: 68.8, adj: 71.2, isAdj: true },
+    { name: "H1 2025", raw, adj: adjusted, isAdj: isAdjusted, current: true },
   ];
 
   return (
@@ -1056,7 +1004,7 @@ function MyRating({ user, goals, lifeEvents, goalsCatalog }) {
               })}
             </Card>
             <Card>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Rating History <span style={{ fontSize: 11, color: C.textSub, fontWeight: 400 }}>(most recent first)</span></div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Rating History</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {periods.map(p => (
                   <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", background: p.current ? C.accentDim : C.surface, borderRadius: 10, border: p.current ? `1px solid ${C.accent}33` : "none" }}>
@@ -1292,22 +1240,21 @@ function MyTeam({ user, allUsers, empGoals, lifeEvents, goalsCatalog, setEmpGoal
         }
       />
       <Page>
-        {team
-          .map(member => ({ member, goals: empGoals[member.id] || [], le: lifeEvents[member.id] || [] }))
-          .map(({ member, goals, le }) => ({ member, goals, le, adjusted: computeRating(goals, le).adjusted }))
-          .sort((a, b) => a.adjusted - b.adjusted)
-          .map(({ member, goals, le, adjusted }) => {
+        {team.map(member => {
+          const goals = empGoals[member.id] || [];
+          const le = lifeEvents[member.id] || [];
+          const { adjusted } = computeRating(goals, le);
           const health = teamHealthColor(goals);
-          const sColor = statusColor(health);
+          const sc = statusColor(health);
           const isOpen = expanded[member.id];
           return (
             <Card key={member.id}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }} onClick={() => setExpanded(e => ({ ...e, [member.id]: !e[member.id] }))}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: sColor + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: sColor, flexShrink: 0 }}>{member.avatar}</div>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: sc + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: sc, flexShrink: 0 }}>{member.avatar}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{member.name}</span>
-                    <Badge color={sColor}>{health}</Badge>
+                    <Badge color={sc}>{health}</Badge>
                     <span style={{ fontSize: 12, color: C.textMuted }}>{member.dept} · {goals.length} goals</span>
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
@@ -1322,7 +1269,7 @@ function MyTeam({ user, allUsers, empGoals, lifeEvents, goalsCatalog, setEmpGoal
                     })}
                   </div>
                 </div>
-                <span style={{ fontSize: 22, fontWeight: 800, color: sColor }}>{adjusted}%</span>
+                <span style={{ fontSize: 22, fontWeight: 800, color: sc }}>{adjusted}%</span>
                 {isOpen ? <ChevronUp size={16} color={C.textMuted} /> : <ChevronDown size={16} color={C.textMuted} />}
               </div>
               {isOpen && (
@@ -1376,15 +1323,12 @@ function MyTeam({ user, allUsers, empGoals, lifeEvents, goalsCatalog, setEmpGoal
   );
 }
 
-function MgrGoalMgmt({ user, allUsers, empGoals, goalsCatalog, setGoalsCatalog, setEmpGoals, showToast }) {
+function MgrGoalMgmt({ user, allUsers, empGoals, goalsCatalog, setGoalsCatalog, showToast }) {
   const team = allUsers.filter(u => u.managerId === user.id);
-  const assignedIds = new Set();
-  team.forEach(m => (empGoals[m.id] || []).forEach(g => assignedIds.add(g.goalId)));
-  const assigned = goalsCatalog.filter(g => assignedIds.has(g.id));
-  const unassigned = goalsCatalog.filter(g => !assignedIds.has(g.id));
+  const allGoalIds = new Set();
+  team.forEach(m => (empGoals[m.id] || []).forEach(g => allGoalIds.add(g.goalId)));
+  const unique = goalsCatalog.filter(g => allGoalIds.has(g.id));
   const [addModal, setAddModal] = useState(false);
-  const [assignModal, setAssignModal] = useState(null);
-  const [selectedMemberId, setSelectedMemberId] = useState("");
   const [form, setForm] = useState({ title: "", category: "", defaultWeight: "" });
 
   function handleAdd() {
@@ -1395,48 +1339,23 @@ function MgrGoalMgmt({ user, allUsers, empGoals, goalsCatalog, setGoalsCatalog, 
     setAddModal(false); setForm({ title: "", category: "", defaultWeight: "" });
   }
 
-  function handleAssignToMember() {
-    if (!selectedMemberId || !assignModal) return;
-    const member = team.find(m => m.id === selectedMemberId);
-    if (!member) return;
-    if ((empGoals[selectedMemberId] || []).some(g => g.goalId === assignModal.id)) { showToast("Already assigned to this member", "warning"); return; }
-    const newGoal = { id: genId("eg"), goalId: assignModal.id, completion: 0, weight: assignModal.defaultWeight, dueDate: "2025-06-30", updates: [{ pct: 0, date: new Date().toISOString().split("T")[0], note: "Assigned by manager" }], files: [] };
-    setEmpGoals(prev => ({ ...prev, [selectedMemberId]: [...(prev[selectedMemberId] || []), newGoal] }));
-    showToast(`Assigned "${assignModal.title}" to ${member.name}`);
-    setAssignModal(null); setSelectedMemberId("");
-  }
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <TopBar title="Goal Management" sub={`${assigned.length} assigned · ${unassigned.length} in catalog (unassigned)`} actions={<Button onClick={() => setAddModal(true)}><Plus size={14} /> Add Custom Goal</Button>} />
+      <TopBar title="Goal Management" sub={`${unique.length} unique goals across your team of ${team.length}`} actions={<Button onClick={() => setAddModal(true)}><Plus size={14} /> Add Custom Goal</Button>} />
       <Page>
-        <div style={{ fontSize: 12, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontWeight: 700 }}>Assigned Goals ({assigned.length})</div>
-        {assigned.length === 0 ? (
+        <div style={{ fontSize: 12, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontWeight: 700 }}>Unique Goals (Union across team)</div>
+        {unique.length === 0 ? (
           <EmptyState icon={Target} text="No goals assigned to your team yet." />
-        ) : assigned.map(g => (
+        ) : unique.map(g => (
           <Card key={g.id} style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <Target size={16} color={C.accent} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{g.title}</div>
-              <div style={{ fontSize: 11, color: C.textMuted }}>Category: {g.category} · Default weight: {g.defaultWeight}% · Used by: {team.filter(m => (empGoals[m.id] || []).some(eg => eg.goalId === g.id)).map(m => m.name.split(" ")[0]).join(", ")}</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>Category: {g.category} · Default weight: {g.defaultWeight}% · Assigned to: {team.filter(m => (empGoals[m.id] || []).some(eg => eg.goalId === g.id)).map(m => m.name.split(" ")[0]).join(", ")}</div>
             </div>
-            <Badge color={C.success}>ASSIGNED</Badge>
-            <Button size="sm" variant="outline" onClick={() => { setAssignModal(g); setSelectedMemberId(""); }}><Plus size={12} /> Assign More</Button>
+            <Badge color={C.accent}>ORG</Badge>
           </Card>
         ))}
-        {unassigned.length > 0 && <>
-          <div style={{ fontSize: 12, color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontWeight: 700, marginTop: 8 }}>Catalog — Unassigned ({unassigned.length})</div>
-          {unassigned.map(g => (
-            <Card key={g.id} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <Target size={16} color={C.textSub} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{g.title}</div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>Category: {g.category} · Default weight: {g.defaultWeight}%</div>
-              </div>
-              <Button size="sm" variant="primary" onClick={() => { setAssignModal(g); setSelectedMemberId(""); }}><Plus size={12} /> Assign</Button>
-            </Card>
-          ))}
-        </>}
       </Page>
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Add Custom Goal">
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1446,22 +1365,6 @@ function MgrGoalMgmt({ user, allUsers, empGoals, goalsCatalog, setGoalsCatalog, 
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Button variant="ghost" onClick={() => setAddModal(false)}>Cancel</Button>
             <Button onClick={handleAdd} disabled={!form.title}>Add to Catalog</Button>
-          </div>
-        </div>
-      </Modal>
-      <Modal open={!!assignModal} onClose={() => setAssignModal(null)} title={`Assign "${assignModal?.title}" to Team Member`}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ fontSize: 13, color: C.textMuted }}>Goal: <strong style={{ color: C.text }}>{assignModal?.title}</strong> · Weight: {assignModal?.defaultWeight}%</div>
-          <Select label="Select Team Member" value={selectedMemberId} onChange={e => setSelectedMemberId(e.target.value)}>
-            <option value="">— Choose —</option>
-            {team.map(m => {
-              const already = (empGoals[m.id] || []).some(g => g.goalId === assignModal?.id);
-              return <option key={m.id} value={m.id} disabled={already}>{m.name}{already ? " (already assigned)" : ""}</option>;
-            })}
-          </Select>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <Button variant="ghost" onClick={() => setAssignModal(null)}>Cancel</Button>
-            <Button onClick={handleAssignToMember} disabled={!selectedMemberId}>Assign</Button>
           </div>
         </div>
       </Modal>
@@ -1629,7 +1532,8 @@ function MgrReports({ user, allUsers, empGoals, lifeEvents, goalsCatalog }) {
   );
 }
 
-
+// missing ChevronLeft import — use inline
+function ChevronLeft(props) { return <ChevronRight {...props} style={{ ...props.style, transform: "rotate(180deg)" }} />; }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    ADMIN VIEWS
@@ -1637,21 +1541,18 @@ function MgrReports({ user, allUsers, empGoals, lifeEvents, goalsCatalog }) {
 function AdminDashboard({ allUsers, empGoals, lifeEvents, goalsCatalog, groups, approvals, setPage }) {
   const employees = allUsers.filter(u => u.role === "EMPLOYEE");
   const managers = allUsers.filter(u => u.role === "MANAGER");
-  const totalAssignments = Object.values(empGoals).flat().length;
+  const activeGoals = Object.values(empGoals).flat().length;
   const completedGoals = Object.values(empGoals).flat().filter(g => goalStatus(g.completion) === "COMPLETED").length;
   const pendingApprovals = approvals.length;
-  const [deptDrill, setDeptDrill] = useState(null);
 
   const deptMap = {};
   employees.forEach(e => {
     const dept = e.dept || "Other";
-    if (!deptMap[dept]) deptMap[dept] = { dept, members: 0, totalRating: 0, emps: [] };
+    if (!deptMap[dept]) deptMap[dept] = { dept, members: 0, totalRating: 0 };
     deptMap[dept].members++;
     const g = empGoals[e.id] || [];
     const le = lifeEvents[e.id] || [];
-    const r = computeRating(g, le).adjusted;
-    deptMap[dept].totalRating += r;
-    deptMap[dept].emps.push({ ...e, rating: r, goalCount: g.length });
+    deptMap[dept].totalRating += computeRating(g, le).adjusted;
   });
   const deptData = Object.values(deptMap).map(d => ({ ...d, avg: Math.round(d.totalRating / d.members * 10) / 10 }));
 
@@ -1661,7 +1562,6 @@ function AdminDashboard({ allUsers, empGoals, lifeEvents, goalsCatalog, groups, 
     return computeRating(g, le).adjusted;
   });
   const orgAvg = allRatings.length > 0 ? (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1) : 0;
-  const ddDept = deptDrill ? deptData.find(d => d.dept === deptDrill) : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1669,37 +1569,23 @@ function AdminDashboard({ allUsers, empGoals, lifeEvents, goalsCatalog, groups, 
       <div style={{ padding: "0 32px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         <StatCard label="Total Employees" value={employees.length} sub={`${managers.length} managers`} icon={Users} color={C.accent} onClick={() => setPage("users")} />
         <StatCard label="Org Avg Rating" value={`${orgAvg}%`} icon={TrendingUp} color={parseFloat(orgAvg) >= 70 ? C.success : C.warning} onClick={() => setPage("reports")} />
-        <StatCard label="Goal Templates" value={goalsCatalog.length} sub={`${totalAssignments} assignments · ${completedGoals} done`} icon={Target} color={C.purple} onClick={() => setPage("goals")} />
-        <StatCard label="Pending Actions" value={pendingApprovals} sub={pendingApprovals > 0 ? "Requires attention" : "All clear"} icon={Clock} color={C.warning} onClick={() => setPage("approvals")} />
+        <StatCard label="Active Goals" value={activeGoals} sub={`${completedGoals} completed`} icon={Target} color={C.purple} onClick={() => setPage("goals")} />
+        <StatCard label="Pending Actions" value={pendingApprovals} sub={pendingApprovals > 0 ? "Requires attention" : "All clear"} icon={Clock} color={C.warning} />
       </div>
       <div style={{ padding: "0 32px", display: "grid", gridTemplateColumns: "3fr 2fr", gap: 16 }}>
         <Card>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Department Performance <span style={{ fontSize: 11, color: C.textSub, fontWeight: 400 }}>· Click bar to drill down</span></div>
-          {!deptDrill ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={deptData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                <XAxis type="number" domain={[0, 100]} stroke={C.textMuted} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="dept" stroke={C.textMuted} tick={{ fontSize: 10 }} width={100} />
-                <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="avg" name="Avg Rating" radius={[0, 5, 5, 0]} cursor="pointer" onClick={d => setDeptDrill(d.dept)}>
-                  {deptData.map((d, i) => <Cell key={i} fill={d.avg >= 75 ? C.success : d.avg >= 60 ? C.warning : C.danger} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div>
-              <Button variant="ghost" size="sm" onClick={() => setDeptDrill(null)} style={{ marginBottom: 12 }}><ArrowUp size={14} style={{ transform: "rotate(-90deg)" }} /> All Departments</Button>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10 }}>{ddDept?.dept} — {ddDept?.members} members · Avg: {ddDept?.avg}%</div>
-              {ddDept?.emps.map(e => (
-                <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", background: C.surface, borderRadius: 8, marginBottom: 6 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 7, background: statusColor(e.rating >= 75 ? "ON_TRACK" : e.rating >= 50 ? "NEEDS_ATTENTION" : "OFF_TRACK") + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: statusColor(e.rating >= 75 ? "ON_TRACK" : "OFF_TRACK") }}>{e.avatar}</div>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{e.name}</div><div style={{ fontSize: 11, color: C.textMuted }}>{e.goalCount} goals</div></div>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: e.rating >= 75 ? C.success : e.rating >= 50 ? C.warning : C.danger }}>{e.rating}%</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Department Performance</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={deptData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis type="number" domain={[0, 100]} stroke={C.textMuted} tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="dept" stroke={C.textMuted} tick={{ fontSize: 10 }} width={100} />
+              <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="avg" name="Avg Rating" radius={[0, 5, 5, 0]}>
+                {deptData.map((d, i) => <Cell key={i} fill={d.avg >= 75 ? C.success : d.avg >= 60 ? C.warning : C.danger} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </Card>
         <Card>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Org Health</div>
@@ -1813,14 +1699,8 @@ function UserManagement({ allUsers, setAllUsers, groups, showToast }) {
                   <td style={{ padding: "10px 12px" }}>
                     <div style={{ display: "flex", gap: 4 }}>
                       <Button size="sm" variant="ghost" onClick={() => openEdit(u)}><Edit size={12} /></Button>
-                      {u.role !== "ADMIN" && (
-                        <Button size="sm" variant="ghost" onClick={() => {
-                          setAllUsers(prev => prev.map(x => x.id === u.id ? { ...x, status: x.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" } : x));
-                          showToast(`${u.name} ${u.status === "ACTIVE" ? "deactivated" : "reactivated"}`);
-                        }} title={u.status === "ACTIVE" ? "Deactivate" : "Reactivate"}>
-                          {u.status === "ACTIVE" ? <ToggleRight size={16} color={C.success} /> : <ToggleLeft size={16} color={C.danger} />}
-                        </Button>
-                      )}
+                      {u.status === "ACTIVE" && u.role !== "ADMIN" && <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm(u)}><Trash2 size={12} color={C.danger} /></Button>}
+                      {u.status === "INACTIVE" && <Button size="sm" variant="outline" onClick={() => { setAllUsers(prev => prev.map(x => x.id === u.id ? { ...x, status: "ACTIVE" } : x)); showToast(`${u.name} reactivated`); }}>Reactivate</Button>}
                     </div>
                   </td>
                 </tr>
@@ -1979,11 +1859,11 @@ function RatingPeriods({ periods, setPeriods, showToast }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <TopBar title="Rating Periods" sub="Most recent first · Define evaluation time windows" actions={<Button onClick={() => { resetForm(); setAddModal(true); }}><Plus size={14} /> Add Period</Button>} />
+      <TopBar title="Rating Periods" sub="Define evaluation time windows" actions={<Button onClick={() => { resetForm(); setAddModal(true); }}><Plus size={14} /> Add Period</Button>} />
       <Page>
         {periods.length === 0 ? (
           <EmptyState icon={Calendar} text="No rating periods configured." action={<Button onClick={() => { resetForm(); setAddModal(true); }}>Create First Period</Button>} />
-        ) : [...periods].sort((a, b) => b.start.localeCompare(a.start)).map(p => (
+        ) : periods.map(p => (
           <Card key={p.id} style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ width: 42, height: 42, borderRadius: 11, background: p.isActive ? C.successDim : C.surface, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Calendar size={18} color={p.isActive ? C.success : C.textMuted} />
@@ -2112,47 +1992,6 @@ function GroupsView({ groups, setGroups, goalsCatalog, allUsers, showToast }) {
 
       <ConfirmDialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} onConfirm={handleDelete}
         title="Delete Group" message={`Remove group "${deleteConfirm?.name}"? Members will not be affected.`} />
-    </div>
-  );
-}
-
-/* ── Admin Approvals ── */
-function AdminApprovals({ approvals, setApprovals, allUsers, showToast }) {
-  function resolve(id, action) {
-    setApprovals(prev => prev.filter(a => a.id !== id));
-    showToast(`Request ${action === "approve" ? "approved" : "rejected"}`);
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <TopBar title="Approvals" sub={`${approvals.length} pending across the organization`} />
-      <Page>
-        {approvals.length === 0 ? (
-          <EmptyState icon={CheckCircle} text="No pending approvals across the organization." />
-        ) : approvals.map(a => {
-          const emp = allUsers.find(u => u.id === a.employeeId);
-          const mgr = allUsers.find(u => u.id === a.managerId);
-          return (
-            <Card key={a.id}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 5 }}>
-                    <Badge color={a.adminOnly ? C.purple : a.type === "LIFE_EVENT" ? C.cyan : C.warning}>{(a.type || "REQUEST").replace(/_/g, " ")}</Badge>
-                    {a.adminOnly && <Badge color={C.purple}>ADMIN</Badge>}
-                    {!a.adminOnly && mgr && <Badge color={C.accent}>{mgr.name.split(" ")[0]}'s team</Badge>}
-                    <span style={{ fontSize: 11, color: C.textMuted }}>{formatDate(a.date)}</span>
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{a.detail}</div>
-                  {emp && <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Employee: {emp.name}</div>}
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Button size="sm" variant="success" onClick={() => resolve(a.id, "approve")}><Check size={12} /> Approve</Button>
-                  <Button size="sm" variant="danger" onClick={() => resolve(a.id, "reject")}><X size={12} /> Reject</Button>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </Page>
     </div>
   );
 }
@@ -2298,7 +2137,6 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("dashboard");
   const [toast, setToast] = useState(null);
-  const [isDark, setIsDark] = useState(true);
 
   // Central state
   const [allUsers, setAllUsers] = useState(INITIAL_USERS);
@@ -2309,20 +2147,15 @@ export default function App() {
   const [groups, setGroups] = useState(INITIAL_GROUPS);
   const [approvals, setApprovals] = useState(INITIAL_APPROVALS);
 
-  // Apply theme — mutate C in-place so all components see updated values on re-render
-  const theme = isDark ? DARK : LIGHT;
-  Object.assign(C, theme);
-
   function showToast(msg, type = "success") { setToast({ msg, type }); }
   function handleLogin(u) { setUser(u); setPage("dashboard"); }
   function handleLogout() { setUser(null); setPage("dashboard"); }
-  function toggleTheme() { setIsDark(d => !d); }
 
-  if (!user) return <LoginPage onLogin={handleLogin} isDark={isDark} onToggleTheme={toggleTheme} />;
+  if (!user) return <LoginPage onLogin={handleLogin} />;
 
   const myGoals = empGoals[user.id] || [];
   const myLifeEvents = lifeEvents[user.id] || [];
-  const mgrApprovalCount = user.role === "MANAGER" ? approvals.filter(a => a.managerId === user.id && !a.adminOnly).length : user.role === "ADMIN" ? approvals.length : 0;
+  const mgrApprovalCount = approvals.filter(a => a.managerId === user.id && !a.adminOnly).length;
 
   function setMyGoals(fn) {
     setEmpGoals(prev => ({ ...prev, [user.id]: typeof fn === "function" ? fn(prev[user.id] || []) : fn }));
@@ -2344,7 +2177,7 @@ export default function App() {
     if (user.role === "MANAGER") {
       if (page === "dashboard") return <MgrDashboard user={user} allUsers={allUsers} empGoals={empGoals} lifeEvents={lifeEvents} goalsCatalog={goalsCatalog} approvals={approvals} setPage={setPage} />;
       if (page === "team") return <MyTeam user={user} allUsers={allUsers} empGoals={empGoals} lifeEvents={lifeEvents} goalsCatalog={goalsCatalog} setEmpGoals={setEmpGoals} showToast={showToast} />;
-      if (page === "goal-mgmt") return <MgrGoalMgmt user={user} allUsers={allUsers} empGoals={empGoals} goalsCatalog={goalsCatalog} setGoalsCatalog={setGoalsCatalog} setEmpGoals={setEmpGoals} showToast={showToast} />;
+      if (page === "goal-mgmt") return <MgrGoalMgmt user={user} allUsers={allUsers} empGoals={empGoals} goalsCatalog={goalsCatalog} setGoalsCatalog={setGoalsCatalog} showToast={showToast} />;
       if (page === "approvals") return <MgrApprovals approvals={approvals} setApprovals={setApprovals} allUsers={allUsers} lifeEvents={lifeEvents} setLifeEvents={setLifeEvents} showToast={showToast} currentUser={user} />;
       if (page === "reports") return <MgrReports user={user} allUsers={allUsers} empGoals={empGoals} lifeEvents={lifeEvents} goalsCatalog={goalsCatalog} />;
     }
@@ -2355,26 +2188,25 @@ export default function App() {
       if (page === "goals") return <AdminGoalMgmt goalsCatalog={goalsCatalog} setGoalsCatalog={setGoalsCatalog} showToast={showToast} />;
       if (page === "periods") return <RatingPeriods periods={periods} setPeriods={setPeriods} showToast={showToast} />;
       if (page === "groups") return <GroupsView groups={groups} setGroups={setGroups} goalsCatalog={goalsCatalog} allUsers={allUsers} showToast={showToast} />;
-      if (page === "approvals") return <AdminApprovals approvals={approvals} setApprovals={setApprovals} allUsers={allUsers} showToast={showToast} />;
       if (page === "reports") return <OrgReport allUsers={allUsers} empGoals={empGoals} lifeEvents={lifeEvents} goalsCatalog={goalsCatalog} />;
     }
     return <div style={{ padding: 32, color: C.textMuted }}>Page not found</div>;
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", transition: "background 0.3s" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: C.bg, fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: ${C.bg}; transition: background 0.3s; }
+        body { background: ${C.bg}; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: ${C.bg}; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 3px; }
-        input, select, textarea { color-scheme: ${isDark ? "dark" : "light"}; }
-        button:hover:not(:disabled) { filter: brightness(${isDark ? "1.08" : "0.95"}); }
+        input, select, textarea { color-scheme: dark; }
+        button:hover:not(:disabled) { filter: brightness(1.08); }
         @keyframes slideIn { from { transform: translateX(100px); opacity:0 } to { transform: translateX(0); opacity:1 } }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.95)} }
       `}</style>
-      <Sidebar user={user} page={page} setPage={setPage} onLogout={handleLogout} approvalCount={mgrApprovalCount} isDark={isDark} onToggleTheme={toggleTheme} />
+      <Sidebar user={user} page={page} setPage={setPage} onLogout={handleLogout} approvalCount={mgrApprovalCount} />
       <main style={{ flex: 1, marginLeft: 240, minHeight: "100vh", overflowY: "auto", paddingBottom: 40 }}>
         <div style={{ paddingTop: 24 }}>{renderContent()}</div>
       </main>
