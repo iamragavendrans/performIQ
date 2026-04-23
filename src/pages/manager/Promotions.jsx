@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Award, Check, Clock, X } from 'lucide-react';
+import { Award, ArrowRight, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
 import { Avatar, Badge, Button, Card, Col, EmptyState, Modal, Row, TextArea } from '../../components/ui';
-import { PROMOTION } from '../../lib/compute';
+import { PROMOTION, nextRole } from '../../lib/compute';
 import { formatDate } from '../../lib/format';
 
 const TIER_FILTERS = {
@@ -63,65 +63,94 @@ export default function ManagerPromotions() {
             return b.r.adjusted - a.r.adjusted;
           })
           .map(({ m, elig, r }) => {
-          const existing = existingRec(m.id);
-          const tierColor = elig.tier === PROMOTION.ELIGIBLE ? C.success : elig.tier === PROMOTION.APPROACHING ? C.warning : C.textMuted;
-          return (
-            <Card key={m.id} hoverable={false} style={{ borderLeft: `3px solid ${tierColor}` }}>
-              <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-                <Row gap={10}>
-                  <Avatar name={m.name} color={m.avatar} size={38} />
-                  <Col gap={2}>
-                    <div style={{ color: C.text, fontWeight: 600 }}>{m.name}</div>
-                    <div style={{ color: C.textMuted, fontSize: 12 }}>{m.title} · rating {r.adjusted.toFixed(1)}</div>
-                  </Col>
-                </Row>
-                <Row gap={8}>
-                  <Badge color={tierColor} bg={tierColor + '22'}>{elig.tier.replace('_', ' ')}</Badge>
-                  {existing && <Badge color={existing.status === 'APPROVED' ? C.success : C.warning} bg={existing.status === 'APPROVED' ? C.successDim : C.warningDim}>{existing.status}</Badge>}
-                  {!existing && (
-                    <Button
-                      size="sm" icon={Award} variant={elig.tier === PROMOTION.ELIGIBLE ? 'success' : 'outline'}
-                      disabled={elig.tier === PROMOTION.NOT_ELIGIBLE}
-                      onClick={() => setOpen(m)}
-                    >
-                      Recommend
-                    </Button>
-                  )}
-                </Row>
-              </Row>
-              <Col gap={4} style={{ marginTop: 10 }}>
-                {elig.reasons.map((r, i) => (
-                  <Row key={i} gap={8} style={{ fontSize: 12, color: C.textMuted }}>
-                    {i === 0 && elig.sustained ? <Check size={12} color={C.success} /> : i === 1 && elig.initiative ? <Check size={12} color={C.success} /> : i === 2 && elig.overdueRatio < 0.2 ? <Check size={12} color={C.success} /> : <Clock size={12} />}
-                    {r}
+            const existing = existingRec(m.id);
+            const tierColor = elig.tier === PROMOTION.ELIGIBLE ? C.success : elig.tier === PROMOTION.APPROACHING ? C.warning : C.textMuted;
+            const target = nextRole(state.progression, m.title);
+            return (
+              <Card key={m.id} hoverable={false} style={{ borderLeft: `3px solid ${tierColor}` }}>
+                <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                  <Row gap={10}>
+                    <Avatar name={m.name} color={m.avatar} size={38} />
+                    <Col gap={2}>
+                      <div style={{ color: C.text, fontWeight: 600 }}>{m.name}</div>
+                      <div style={{ color: C.textMuted, fontSize: 12 }}>
+                        {m.title} · rating {r.adjusted.toFixed(1)}
+                        {target && <> · next: <span style={{ color: C.accent, fontWeight: 600 }}>{target}</span></>}
+                      </div>
+                    </Col>
                   </Row>
-                ))}
+                  <Row gap={8}>
+                    <Badge color={tierColor} bg={tierColor + '22'}>{elig.tier.replace('_', ' ')}</Badge>
+                    {existing && <Badge color={existing.status === 'APPROVED' ? C.success : C.warning} bg={existing.status === 'APPROVED' ? C.successDim : C.warningDim}>{existing.status}</Badge>}
+                    {!existing && (
+                      <Button
+                        size="sm" icon={Award} variant={elig.tier === PROMOTION.ELIGIBLE ? 'success' : 'outline'}
+                        disabled={elig.tier === PROMOTION.NOT_ELIGIBLE || !target}
+                        onClick={() => setOpen({ m, target, elig })}
+                      >
+                        Recommend
+                      </Button>
+                    )}
+                  </Row>
+                </Row>
+                <Col gap={6} style={{ marginTop: 14 }}>
+                  <Row style={{ justifyContent: 'space-between', fontSize: 11, color: C.textMuted }}>
+                    <span>Readiness</span>
+                    <span style={{ color: tierColor, fontWeight: 700 }}>{elig.score}/100</span>
+                  </Row>
+                  <div style={{ height: 10, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', width: `${elig.score}%`,
+                      background: `linear-gradient(90deg, ${tierColor}, ${tierColor}cc)`,
+                      transition: 'width 500ms ease',
+                    }} />
+                  </div>
+                </Col>
                 {existing && (
-                  <div style={{ marginTop: 6, padding: 8, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
+                  <div style={{ marginTop: 10, padding: 8, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
                     Recommended on {formatDate(existing.date)} — &ldquo;{existing.reason}&rdquo;
                   </div>
                 )}
-              </Col>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })}
       </Col>
 
-      <RecommendModal open={!!open} onClose={() => setOpen(null)} member={open} managerId={user.id} actions={actions} />
+      <RecommendModal open={!!open} onClose={() => setOpen(null)} payload={open} managerId={user.id} actions={actions} C={C} />
     </>
   );
 }
 
-function RecommendModal({ open, onClose, member, managerId, actions }) {
+function RecommendModal({ open, onClose, payload, managerId, actions, C }) {
   const [reason, setReason] = useState('');
-  if (!member) return null;
+  if (!payload) return null;
+  const { m, target, elig } = payload;
   return (
-    <Modal open={open} onClose={onClose} title={`Recommend ${member.name} for promotion`}>
+    <Modal open={open} onClose={onClose} title={`Recommend ${m.name} for promotion`}>
+      <div style={{ padding: 12, background: C.surface, borderRadius: 10, marginBottom: 14, fontSize: 13 }}>
+        <Row gap={10} style={{ alignItems: 'center' }}>
+          <div style={{ color: C.textMuted }}>{m.title}</div>
+          <ArrowRight size={14} color={C.accent} />
+          <div style={{ color: C.accent, fontWeight: 700 }}>{target || '— no next step defined —'}</div>
+        </Row>
+      </div>
+      <Col gap={6} style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>Readiness signals (not shown to the employee)</div>
+        {elig.reasons.map((r, i) => {
+          const ok = (i === 0 && elig.sustained) || (i === 1 && elig.initiative) || (i === 2 && elig.overdueRatio < 0.2);
+          return (
+            <Row key={i} gap={8} style={{ fontSize: 12, color: C.textMuted }}>
+              {ok ? <CheckCircle size={13} color={C.success} /> : <AlertCircle size={13} color={C.warning} />}
+              {r}
+            </Row>
+          );
+        })}
+      </Col>
       <TextArea label="Why this person, now?" value={reason} onChange={setReason} rows={4} placeholder="Specific achievements, sustained signal, leadership moments…" />
       <Row style={{ justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="success" disabled={!reason.trim()} onClick={() => { actions.recommendPromotion(member.id, managerId, reason.trim()); onClose(); }}>
-          Send to Admin
+        <Button variant="success" disabled={!reason.trim() || !target} onClick={() => { actions.recommendPromotion(m.id, managerId, reason.trim(), target); onClose(); }}>
+          Send to Director
         </Button>
       </Row>
     </Modal>

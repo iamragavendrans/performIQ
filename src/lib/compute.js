@@ -88,18 +88,26 @@ export const computePromotionEligibility = ({
     : 0;
   const initiative = selfProposedApprovedCount >= 1;
 
-  const score =
-    (sustained ? 2 : recent.some((r) => (r.adjusted || 0) >= target) ? 1 : 0) +
-    (initiative ? 1 : 0) +
-    (overdueRatio < 0.2 ? 1 : 0);
+  // Composite readiness 0-100: outcomes (sustained rating) weigh most,
+  // initiative and reliability fill the rest. The individual components are
+  // not exposed on dashboards to limit gaming — only shown to managers in the
+  // recommendation modal.
+  const ratingPart =
+    sustained ? 50 :
+    recent.some((r) => (r.adjusted || 0) >= target) ? 25 :
+    recent.length ? Math.max(0, (recent[0].adjusted - (target - 25)) * 1.0) : 0;
+  const initiativePart = initiative ? 25 : Math.min(25, selfProposedApprovedCount * 10);
+  const reliabilityPart = overdueRatio < 0.2 ? 25 : overdueRatio < 0.4 ? 12 : 0;
+  const score = Math.max(0, Math.min(100, Math.round(ratingPart + initiativePart + reliabilityPart)));
 
   let tier;
-  if (sustained && initiative && overdueRatio < 0.2) tier = PROMOTION.ELIGIBLE;
-  else if (score >= 2) tier = PROMOTION.APPROACHING;
+  if (score >= 85 && sustained && initiative) tier = PROMOTION.ELIGIBLE;
+  else if (score >= 55) tier = PROMOTION.APPROACHING;
   else tier = PROMOTION.NOT_ELIGIBLE;
 
   return {
     tier,
+    score,
     sustained,
     initiative,
     overdueRatio,
@@ -110,4 +118,9 @@ export const computePromotionEligibility = ({
       overdueRatio < 0.2 ? 'Low overdue ratio' : 'Too many overdue goals',
     ],
   };
+};
+
+export const nextRole = (progression, title) => {
+  if (!title) return null;
+  return progression?.[title] ?? null;
 };

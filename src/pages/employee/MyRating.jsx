@@ -1,4 +1,4 @@
-import { Award, Heart, Info, TrendingUp } from 'lucide-react';
+import { Award, Heart, TrendingUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
@@ -105,19 +105,30 @@ export default function MyRating() {
 
         <Card hoverable={false} style={{ borderLeft: `3px solid ${eligibilityColor}` }}>
           <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 style={{ color: C.text, fontSize: 16 }}>Promotion signal</h3>
+            <h3 style={{ color: C.text, fontSize: 16 }}>Promotion readiness</h3>
             <Badge color={eligibilityColor} bg={eligibilityColor + '22'}>{eligibility.tier.replace('_', ' ')}</Badge>
           </Row>
           <Col gap={8}>
-            {eligibility.reasons.map((r, i) => (
-              <Row key={i} gap={8} style={{ fontSize: 13, color: C.textMuted }}>
-                <Info size={13} color={C.textMuted} /> {r}
-              </Row>
-            ))}
+            <Row style={{ justifyContent: 'space-between', fontSize: 12, color: C.textMuted }}>
+              <span>Composite readiness</span>
+              <span style={{ color: eligibilityColor, fontWeight: 700 }}>{eligibility.score}/100</span>
+            </Row>
+            <div style={{ height: 12, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${eligibility.score}%`,
+                background: `linear-gradient(90deg, ${eligibilityColor}, ${eligibilityColor}cc)`,
+                transition: 'width 600ms ease',
+              }} />
+            </div>
+            <div style={{ fontSize: 11, color: C.textSub, marginTop: 4 }}>
+              A single composite signal — the underlying parameters are intentionally not itemised, to keep focus on doing the work, not optimising the metric.
+            </div>
           </Col>
           {myPromotion && (
             <div style={{ marginTop: 14, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
-              Your manager has recommended you for promotion on {formatDate(myPromotion.date)}. Status: <b style={{ color: myPromotion.status === 'APPROVED' ? C.success : C.warning }}>{myPromotion.status}</b>
+              Your manager has recommended you for promotion on {formatDate(myPromotion.date)}.
+              {myPromotion.targetTitle && <> Target role: <b style={{ color: C.accent }}>{myPromotion.targetTitle}</b>.</>}
+              {' '}Status: <b style={{ color: myPromotion.status === 'APPROVED' ? C.success : C.warning }}>{myPromotion.status}</b>
             </div>
           )}
         </Card>

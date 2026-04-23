@@ -230,10 +230,39 @@ export const INITIAL_APPROVALS = [
 ];
 
 // ------------ Promotions ----------------------------------------------------
-// Seed one active promotion recommendation that admin can approve/reject.
+// Seed one active promotion recommendation that the director can approve/reject.
 export const INITIAL_PROMOTIONS = [
   { id: genId('promo'), employeeId: 'u_be_1', recommendedBy: 'u_mgr_be', status: 'RECOMMENDED', reason: 'Sustained >90 rating; led payment refactor.', date: daysAgo(4) },
 ];
+
+// ------------ Role progression ladder ---------------------------------------
+// Each group ladders IC roles; managers and director have their own chain.
+// `progression[title]` → next title, or null if top of ladder.
+export const INITIAL_LADDERS = [
+  { group: 'QA Engineer',        roles: ['QA Engineer I', 'QA Engineer II', 'Senior QA Engineer', 'Staff QA Engineer', 'QA Lead'] },
+  { group: 'Backend Developer',  roles: ['Backend Dev I', 'Backend Dev II', 'Senior Backend Dev', 'Staff Backend Dev', 'Backend Lead'] },
+  { group: 'Frontend Developer', roles: ['Frontend Dev I', 'Frontend Dev II', 'Senior Frontend Dev', 'Staff Frontend Dev', 'Frontend Lead'] },
+  { group: 'Management',         roles: ['QA Lead', 'QA Manager', 'Senior QA Manager', 'Director of Engineering'] },
+  { group: 'Management',         roles: ['Backend Lead', 'Backend Manager', 'Senior Backend Manager', 'Director of Engineering'] },
+  { group: 'Management',         roles: ['Frontend Lead', 'Frontend Manager', 'Senior Frontend Manager', 'Director of Engineering'] },
+  { group: 'Leadership',         roles: ['Director of Engineering', 'VP Engineering', 'CTO'] },
+];
+
+const buildProgression = () => {
+  const map = {};
+  INITIAL_LADDERS.forEach((l) => {
+    for (let i = 0; i < l.roles.length - 1; i++) {
+      // Don't clobber a more-specific mapping with a generic one.
+      if (!map[l.roles[i]]) map[l.roles[i]] = l.roles[i + 1];
+    }
+    if (!map[l.roles.at(-1)]) map[l.roles.at(-1)] = null;
+  });
+  // Aliases for titles used in seed that aren't strictly on the main ladder.
+  map['QA Automation Engineer'] = 'Senior QA Engineer';
+  return map;
+};
+
+export const INITIAL_PROGRESSION = buildProgression();
 
 // ------------ Full initial state --------------------------------------------
 export const buildInitialState = () => ({
@@ -247,5 +276,7 @@ export const buildInitialState = () => ({
   approvals: INITIAL_APPROVALS,
   ratingHistory: INITIAL_RATING_HISTORY,
   promotions: INITIAL_PROMOTIONS,
+  ladders: INITIAL_LADDERS,
+  progression: INITIAL_PROGRESSION,
   meta: { seededAt: today() },
 });

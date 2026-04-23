@@ -350,15 +350,15 @@ export function AppProvider({ children }) {
     },
 
     // Promotions
-    recommendPromotion: (employeeId, recommendedBy, reason) => {
+    recommendPromotion: (employeeId, recommendedBy, reason, targetTitle = null) => {
       dispatch({
         type: 'ADD_PROMOTION',
         promotion: {
-          id: genId('promo'), employeeId, recommendedBy, reason,
+          id: genId('promo'), employeeId, recommendedBy, reason, targetTitle,
           status: 'RECOMMENDED', date: new Date().toISOString().slice(0, 10),
         },
       });
-      showToast('Promotion recommended — admin will review');
+      showToast('Promotion recommended — director will review');
     },
     decidePromotion: (promotionId, approve) => {
       dispatch({

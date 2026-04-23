@@ -30,6 +30,7 @@ const DIRECTOR_MENU = [
   { id: 'approvals',  label: 'Approvals',     icon: CheckCircle },
   { id: 'promotions', label: 'Promotions',    icon: Award },
   { id: 'reports',    label: 'Org Report',    icon: FileText },
+  { id: 'hierarchy',  label: 'Org Hierarchy', icon: Layers },
 ];
 
 const ADMIN_MENU = [

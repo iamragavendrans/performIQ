@@ -1,9 +1,9 @@
-import { Award, CheckCircle, X } from 'lucide-react';
+import { Award, CheckCircle, X, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
 import { Avatar, Badge, Button, Card, Col, EmptyState, Row } from '../../components/ui';
-import { PROMOTION } from '../../lib/compute';
+import { PROMOTION, nextRole } from '../../lib/compute';
 import { formatDate } from '../../lib/format';
 
 export default function AdminPromotions() {
@@ -15,7 +15,10 @@ export default function AdminPromotions() {
 
   return (
     <>
-      <PageHeader title="Promotions" subtitle="Manager-recommended promotions awaiting your review." />
+      <PageHeader
+        title="Promotions"
+        subtitle="Manager-recommended promotions awaiting your approval. You see a composite readiness score and target role — not the underlying parameters."
+      />
 
       {pending.length === 0
         ? <Card><EmptyState icon={Award} title="No promotions pending" /></Card>
@@ -25,7 +28,8 @@ export default function AdminPromotions() {
               const mgr = findUser(p.recommendedBy);
               const r = computeRatingFor(p.employeeId);
               const elig = eligibilityFor(p.employeeId);
-              const color = elig.tier === PROMOTION.ELIGIBLE ? C.success : C.warning;
+              const color = elig.tier === PROMOTION.ELIGIBLE ? C.success : elig.tier === PROMOTION.APPROACHING ? C.warning : C.textMuted;
+              const target = p.targetTitle || nextRole(state.progression, emp?.title);
               return (
                 <Card key={p.id} hoverable={false} style={{ borderLeft: `3px solid ${color}` }}>
                   <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
@@ -33,16 +37,34 @@ export default function AdminPromotions() {
                       <Avatar name={emp?.name} color={emp?.avatar} size={40} />
                       <Col gap={2}>
                         <div style={{ color: C.text, fontWeight: 600 }}>{emp?.name}</div>
-                        <div style={{ color: C.textMuted, fontSize: 12 }}>{emp?.title} · rating {r.adjusted.toFixed(1)}</div>
-                        <div style={{ color: C.textSub, fontSize: 11 }}>Recommended by {mgr?.name} · {formatDate(p.date)}</div>
+                        <div style={{ color: C.textMuted, fontSize: 12 }}>Rating {r.adjusted.toFixed(1)} · recommended by {mgr?.name} · {formatDate(p.date)}</div>
+                        <Row gap={8} style={{ marginTop: 6, alignItems: 'center' }}>
+                          <span style={{ color: C.textMuted, fontSize: 12 }}>{emp?.title}</span>
+                          <ArrowRight size={12} color={C.accent} />
+                          <span style={{ color: C.accent, fontSize: 12, fontWeight: 700 }}>{target || '— no next step defined —'}</span>
+                        </Row>
                       </Col>
                     </Row>
                     <Row gap={8}>
-                      <Badge color={color} bg={color + '22'}>{elig.tier.replace('_', ' ')}</Badge>
                       <Button size="sm" variant="ghost" icon={X} onClick={() => actions.decidePromotion(p.id, false)}>Reject</Button>
                       <Button size="sm" variant="success" icon={CheckCircle} onClick={() => actions.decidePromotion(p.id, true)}>Approve</Button>
                     </Row>
                   </Row>
+
+                  <Col gap={6} style={{ marginTop: 14 }}>
+                    <Row style={{ justifyContent: 'space-between', fontSize: 11, color: C.textMuted }}>
+                      <span>Readiness</span>
+                      <span style={{ color, fontWeight: 700 }}>{elig.score}/100 · {elig.tier.replace('_', ' ')}</span>
+                    </Row>
+                    <div style={{ height: 10, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', width: `${elig.score}%`,
+                        background: `linear-gradient(90deg, ${color}, ${color}cc)`,
+                        transition: 'width 500ms ease',
+                      }} />
+                    </div>
+                  </Col>
+
                   <div style={{ marginTop: 10, padding: 10, background: C.surface, borderRadius: 8, fontSize: 13, color: C.textMuted }}>
                     &ldquo;{p.reason}&rdquo;
                   </div>

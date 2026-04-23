@@ -27,6 +27,7 @@ import Groups from './pages/admin/Groups';
 import AdminApprovals from './pages/admin/Approvals';
 import AdminPromotions from './pages/admin/Promotions';
 import OrgReport from './pages/admin/OrgReport';
+import OrgHierarchy from './pages/director/Hierarchy';
 
 function Router() {
   const { user, page, toast, managerMode } = useApp();
@@ -56,6 +57,7 @@ function Router() {
       approvals:    <MgrApprovals />,
       promotions:   <AdminPromotions />,
       reports:      <OrgReport />,
+      hierarchy:    <OrgHierarchy />,
     }[page] || <MgrDashboard />;
   } else if (useManagerSurface) {
     content = {

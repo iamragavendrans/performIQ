@@ -1,4 +1,4 @@
-import { Target, Award, Heart, TrendingUp, Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { Target, Award, Heart, TrendingUp, Plus, CheckCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
@@ -65,18 +65,21 @@ export default function EmployeeDashboard() {
             <h3 style={{ color: C.text, fontSize: 16 }}>Promotion readiness</h3>
             <Badge color={eligibilityColor} bg={eligibilityColor + '22'}>{eligibility.tier.replace('_', ' ')}</Badge>
           </Row>
-          <Col gap={10}>
-            {eligibility.reasons.map((r, i) => (
-              <Row key={i} gap={8}>
-                {(i === 0 && eligibility.sustained) || (i === 1 && eligibility.initiative) || (i === 2 && eligibility.overdueRatio < 0.2)
-                  ? <CheckCircle size={14} color={C.success} />
-                  : <AlertCircle size={14} color={C.warning} />}
-                <div style={{ fontSize: 13, color: C.textMuted }}>{r}</div>
-              </Row>
-            ))}
+          <Col gap={8}>
+            <Row style={{ justifyContent: 'space-between', fontSize: 12, color: C.textMuted }}>
+              <span>Composite readiness</span>
+              <span style={{ color: eligibilityColor, fontWeight: 700 }}>{eligibility.score}/100</span>
+            </Row>
+            <div style={{ height: 10, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${eligibility.score}%`,
+                background: `linear-gradient(90deg, ${eligibilityColor}, ${eligibilityColor}cc)`,
+                transition: 'width 600ms ease',
+              }} />
+            </div>
           </Col>
           <div style={{ marginTop: 14, padding: 12, background: C.surface, borderRadius: 10, fontSize: 12, color: C.textMuted }}>
-            Tip: self-propose a stretch goal to signal initiative. Your manager will review it.
+            Keep doing the work — your rating, initiative and delivery roll up into this number.
             <div style={{ marginTop: 8 }}>
               <Button size="sm" variant="outline" icon={Plus} onClick={() => setPage('my-goals')}>Self-propose a goal</Button>
             </div>
