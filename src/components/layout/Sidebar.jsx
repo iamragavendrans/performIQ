@@ -76,7 +76,9 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {isManager && hasEmployeeSurface(user.role) && (
+      {/* Only line-managers get a dual surface. Directors have no IC goals —
+          their surface is already geared to leadership. */}
+      {user.role === ROLES.MANAGER && hasEmployeeSurface(user.role) && (
         <div style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 6 }}>
           <button
             onClick={() => { setManagerMode(true); setPage('dashboard'); }}

@@ -4,10 +4,14 @@ import { PageHeader } from '../../components/layout/Shell';
 import { Avatar, Badge, Card, Col, Row } from '../../components/ui';
 import { nextRole } from '../../lib/compute';
 import { ArrowRight, ChevronRight } from 'lucide-react';
+import { INITIAL_LADDERS, INITIAL_PROGRESSION } from '../../data/seed';
 
 export default function OrgHierarchy() {
   const { state } = useApp();
   const { C } = useTheme();
+  // Defensive: older persisted state may not have ladders/progression.
+  const ladders = state.ladders && state.ladders.length ? state.ladders : INITIAL_LADDERS;
+  const progression = state.progression || INITIAL_PROGRESSION;
 
   // Map every current title → users holding it, so we can annotate the ladder.
   const usersByTitle = state.users.reduce((acc, u) => {
@@ -25,7 +29,7 @@ export default function OrgHierarchy() {
       />
 
       <Col gap={16}>
-        {state.ladders.map((ladder, idx) => (
+        {ladders.map((ladder, idx) => (
           <Card key={idx} hoverable={false}>
             <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
               <h3 style={{ color: C.text, fontSize: 16 }}>{ladder.group} ladder</h3>
@@ -71,7 +75,7 @@ export default function OrgHierarchy() {
           {state.promotions.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>No promotions in flight.</div>}
           {state.promotions.map((p) => {
             const emp = state.users.find((u) => u.id === p.employeeId);
-            const target = p.targetTitle || nextRole(state.progression, emp?.title);
+            const target = p.targetTitle || nextRole(progression, emp?.title);
             return (
               <Row key={p.id} gap={10} style={{ padding: 10, background: C.surface, borderRadius: 10, fontSize: 13 }}>
                 <Avatar name={emp?.name} color={emp?.avatar} size={26} />

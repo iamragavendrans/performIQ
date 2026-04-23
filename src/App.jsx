@@ -33,11 +33,10 @@ function Router() {
   const { user, page, toast, managerMode } = useApp();
   if (!user) return <><Login /><Toast toast={toast} /></>;
 
-  const isManagerLike = user.role === ROLES.MANAGER || user.role === ROLES.DIRECTOR;
-  const useDirectorSurface = user.role === ROLES.DIRECTOR && managerMode;
+  // Directors have no IC goals surface; they're always in the director surface.
+  const useDirectorSurface = user.role === ROLES.DIRECTOR;
   const useManagerSurface = user.role === ROLES.MANAGER && managerMode;
   const useAdminSurface = user.role === ROLES.ADMIN;
-  void isManagerLike;
 
   let content = null;
   if (useAdminSurface) {

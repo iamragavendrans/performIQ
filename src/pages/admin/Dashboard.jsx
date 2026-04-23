@@ -50,7 +50,16 @@ export default function AdminDashboard() {
             const max = Math.max(...roleCounts.map((x) => x.count));
             const widthPct = max ? (r.count / max) * 100 : 0;
             return (
-              <Row key={r.role} gap={12} style={{ fontSize: 13 }}>
+              <Row
+                key={r.role} gap={12}
+                onClick={() => setPage('users', { filter: r.role })}
+                style={{
+                  fontSize: 13, cursor: 'pointer', padding: '6px 8px',
+                  borderRadius: 8, transition: 'background 120ms ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = C.surface; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
                 <div style={{ minWidth: 100, color: C.textMuted }}>{r.role}</div>
                 <div style={{ flex: 1, height: 8, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${widthPct}%`, background: C.accent }} />

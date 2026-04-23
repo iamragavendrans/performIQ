@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Avatar, Badge, Card, Col, ProgressBar, Row, Select } from '../../components/ui';
+import { Avatar, Badge, Button, Card, Col, ProgressBar, Row, Select } from '../../components/ui';
 import { goalStatus, healthColor, statusColor, teamHealth } from '../../lib/compute';
 
 const SORTS = {
@@ -62,7 +62,12 @@ export default function ManagerReports() {
               <CartesianGrid stroke={C.border} strokeDasharray="3 3" />
               <XAxis dataKey="name" tick={{ fill: C.textMuted, fontSize: 12 }} />
               <YAxis domain={[0, 100]} tick={{ fill: C.textMuted, fontSize: 12 }} />
-              <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }} />
+              <Tooltip
+                contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 13 }}
+                labelStyle={{ color: C.text, fontWeight: 700 }}
+                itemStyle={{ color: C.text }}
+                cursor={{ fill: C.accentDim }}
+              />
               <Bar dataKey="rating">
                 {teamChartData.map((d, i) => (
                   <Cell key={i} fill={healthColor(d.health, C)} />
@@ -74,7 +79,12 @@ export default function ManagerReports() {
       </Card>
 
       {member ? (
-        <MemberDetail member={member} goals={goalsFor(member.id)} rating={computeRatingFor(member.id)} C={C} state={state} />
+        <>
+          <Row style={{ marginBottom: 12 }}>
+            <Button size="sm" variant="ghost" onClick={() => setFocus('ALL')}>&larr; Back to all members</Button>
+          </Row>
+          <MemberDetail member={member} goals={goalsFor(member.id)} rating={computeRatingFor(member.id)} C={C} state={state} />
+        </>
       ) : (
         <Col gap={10}>
           {rows.map(({ m, rating, health }) => (

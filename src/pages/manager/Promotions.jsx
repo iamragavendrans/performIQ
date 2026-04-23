@@ -65,7 +65,7 @@ export default function ManagerPromotions() {
           .map(({ m, elig, r }) => {
             const existing = existingRec(m.id);
             const tierColor = elig.tier === PROMOTION.ELIGIBLE ? C.success : elig.tier === PROMOTION.APPROACHING ? C.warning : C.textMuted;
-            const target = nextRole(state.progression, m.title);
+            const target = nextRole(state.progression || {}, m.title);
             return (
               <Card key={m.id} hoverable={false} style={{ borderLeft: `3px solid ${tierColor}` }}>
                 <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>

@@ -9,7 +9,7 @@ import { ROLES } from '../../lib/roles';
 import { Users, Award, Heart, TrendingUp } from 'lucide-react';
 
 export default function OrgReport() {
-  const { state, teamFor, goalsFor, computeRatingFor, eligibilityFor } = useApp();
+  const { state, teamFor, goalsFor, computeRatingFor, eligibilityFor, setPage } = useApp();
   const { C } = useTheme();
   const managers = state.users.filter((u) => u.role === ROLES.MANAGER);
   const [focus, setFocus] = useState('ALL');
@@ -34,11 +34,19 @@ export default function OrgReport() {
     <>
       <PageHeader title="Organisation Report" subtitle="Org-wide view with drill-down by team." />
 
-      <Grid columns={4} minWidth={200} style={{ marginBottom: 20 }}>
-        <StatCard icon={Users}       label="Users"                  value={state.users.length} color={C.accent} />
-        <StatCard icon={Award}       label="Avg adjusted rating"    value={teamData.length ? (teamData.reduce((s, t) => s + t.rating, 0) / teamData.length).toFixed(1) : '—'} color={C.purple} />
-        <StatCard icon={Heart}       label="Approved life events"   value={approvedLifeEvents} color={C.cyan} />
-        <StatCard icon={TrendingUp}  label="Promotion-eligible"     value={state.users.filter((u) => u.role === ROLES.EMPLOYEE && eligibilityFor(u.id).tier === PROMOTION.ELIGIBLE).length} color={C.success} />
+      <Grid minWidth={200} style={{ marginBottom: 20 }}>
+        <Card onClick={() => setPage('my-team')}>
+          <StatCard icon={Users} label="Users" value={state.users.length} color={C.accent} />
+        </Card>
+        <Card onClick={() => setPage('reports')}>
+          <StatCard icon={Award} label="Avg adjusted rating" value={teamData.length ? (teamData.reduce((s, t) => s + t.rating, 0) / teamData.length).toFixed(1) : '—'} color={C.purple} />
+        </Card>
+        <Card onClick={() => setPage('approvals')}>
+          <StatCard icon={Heart} label="Approved life events" value={approvedLifeEvents} color={C.cyan} />
+        </Card>
+        <Card onClick={() => setPage('promotions', { filter: 'RECOMMENDED' })}>
+          <StatCard icon={TrendingUp} label="Promotion-eligible" value={state.users.filter((u) => u.role === ROLES.EMPLOYEE && eligibilityFor(u.id).tier === PROMOTION.ELIGIBLE).length} color={C.success} />
+        </Card>
       </Grid>
 
       <Grid columns={2} minWidth={360} style={{ marginBottom: 20 }}>
@@ -58,7 +66,12 @@ export default function OrgReport() {
                 <CartesianGrid stroke={C.border} strokeDasharray="3 3" />
                 <XAxis dataKey="name" tick={{ fill: C.textMuted, fontSize: 12 }} />
                 <YAxis domain={[0, 100]} tick={{ fill: C.textMuted, fontSize: 12 }} />
-                <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }} />
+                <Tooltip
+                  contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 13 }}
+                  labelStyle={{ color: C.text, fontWeight: 700 }}
+                  itemStyle={{ color: C.text }}
+                  cursor={{ fill: C.accentDim }}
+                />
                 <Bar dataKey="rating">
                   {filteredTeams.map((d, i) => <Cell key={i} fill={healthColor(d.health, C)} />)}
                 </Bar>
@@ -76,7 +89,12 @@ export default function OrgReport() {
                   {eligibilityDist.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Pie>
                 <Legend />
-                <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }} />
+                <Tooltip
+                  contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 13 }}
+                  labelStyle={{ color: C.text, fontWeight: 700 }}
+                  itemStyle={{ color: C.text }}
+                  cursor={{ fill: C.accentDim }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

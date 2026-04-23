@@ -29,7 +29,7 @@ export default function AdminPromotions() {
               const r = computeRatingFor(p.employeeId);
               const elig = eligibilityFor(p.employeeId);
               const color = elig.tier === PROMOTION.ELIGIBLE ? C.success : elig.tier === PROMOTION.APPROACHING ? C.warning : C.textMuted;
-              const target = p.targetTitle || nextRole(state.progression, emp?.title);
+              const target = p.targetTitle || nextRole(state.progression || {}, emp?.title);
               return (
                 <Card key={p.id} hoverable={false} style={{ borderLeft: `3px solid ${color}` }}>
                   <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
