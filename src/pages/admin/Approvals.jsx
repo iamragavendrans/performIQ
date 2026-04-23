@@ -13,7 +13,10 @@ export default function AdminApprovals() {
 
   return (
     <>
-      <PageHeader title="Admin Approvals" subtitle="Cross-team changes that require admin sign-off (team linking, etc.)." />
+      <PageHeader
+        title="Admin Approvals"
+        subtitle="Org changes that require admin sign-off: new users added by managers/directors, and cross-team linking."
+      />
 
       {pending.length === 0
         ? <Card><EmptyState icon={CheckCircle} title="Nothing pending" /></Card>
@@ -25,7 +28,7 @@ export default function AdminApprovals() {
                 <Card key={a.id} hoverable={false}>
                   <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                     <Col gap={4}>
-                      <div style={{ color: C.text, fontWeight: 600 }}>{a.type.replace('_', ' ')}</div>
+                      <div style={{ color: C.text, fontWeight: 600 }}>{a.type.replace(/_/g, ' ')}</div>
                       <div style={{ color: C.textMuted, fontSize: 13 }}>{a.detail}</div>
                       <div style={{ color: C.textSub, fontSize: 11 }}>{emp?.name} · requested by {mgr?.name} · {formatDate(a.date)}</div>
                     </Col>

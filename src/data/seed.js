@@ -1,4 +1,4 @@
-import { ROLES, APPROVAL_TYPES, APPROVAL_STATUS } from '../lib/roles';
+import { ROLES, APPROVAL_TYPES, APPROVAL_STATUS, USER_STATUS } from '../lib/roles';
 import { genId } from '../lib/ids';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -266,7 +266,7 @@ export const INITIAL_PROGRESSION = buildProgression();
 
 // ------------ Full initial state --------------------------------------------
 export const buildInitialState = () => ({
-  users: INITIAL_USERS,
+  users: INITIAL_USERS.map((u) => ({ status: USER_STATUS.ACTIVE, pendingApproval: false, ...u })),
   passwords: INITIAL_PASSWORDS,
   goalsCatalog: INITIAL_GOALS_CATALOG,
   empGoals: INITIAL_EMP_GOALS,

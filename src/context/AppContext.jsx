@@ -173,7 +173,8 @@ export function AppProvider({ children }) {
   const findUser = useCallback((id) => state.users.find((u) => u.id === id), [state.users]);
 
   const teamFor = useCallback(
-    (managerId) => state.users.filter((u) => u.managerId === managerId),
+    // Inactive users stay in state for audit but do not appear in active views.
+    (managerId) => state.users.filter((u) => u.managerId === managerId && u.status !== 'INACTIVE'),
     [state.users]
   );
 
@@ -346,6 +347,15 @@ export function AppProvider({ children }) {
       if (appr.type === APPROVAL_TYPES.TEAM_LINK && approve && appr.payload) {
         dispatch({ type: 'UPDATE_USER', id: appr.employeeId, patch: { managerId: appr.payload.newManagerId } });
       }
+      if (appr.type === APPROVAL_TYPES.NEW_USER) {
+        dispatch({
+          type: 'UPDATE_USER',
+          id: appr.employeeId,
+          patch: approve
+            ? { pendingApproval: false, status: 'ACTIVE' }
+            : { pendingApproval: false, status: 'INACTIVE' },
+        });
+      }
       showToast(approve ? 'Approved' : 'Rejected');
     },
 
@@ -368,9 +378,45 @@ export function AppProvider({ children }) {
       showToast(approve ? 'Promotion approved' : 'Promotion rejected');
     },
 
-    // Admin
-    addUser: (user) => { dispatch({ type: 'ADD_USER', user: { ...user, id: genId('u') } }); showToast('User added'); },
-    updateUser: (id, patch) => dispatch({ type: 'UPDATE_USER', id, patch }),
+    // Admin + manager/director self-serve
+    //
+    // addUser is the single entry point for creating a user. Direct creation
+    // by ADMIN is immediate; creation requested by a MANAGER or DIRECTOR
+    // lands the user in state with pendingApproval=true and queues a NEW_USER
+    // admin approval. decideApproval flips or removes.
+    addUser: (user, requestedBy = ROLES.ADMIN) => {
+      const id = genId('u');
+      const needsApproval = requestedBy !== ROLES.ADMIN;
+      const record = {
+        status: 'ACTIVE',
+        pendingApproval: needsApproval,
+        ...user,
+        id,
+      };
+      dispatch({ type: 'ADD_USER', user: record });
+      if (needsApproval) {
+        dispatch({
+          type: 'ADD_APPROVAL',
+          approval: {
+            id: genId('appr'),
+            type: APPROVAL_TYPES.NEW_USER,
+            employeeId: id,
+            managerId: user.managerId,
+            status: APPROVAL_STATUS.PENDING,
+            adminOnly: true,
+            date: new Date().toISOString().slice(0, 10),
+            detail: `${requestedBy} added ${user.name} (${user.role}${user.title ? ' — ' + user.title : ''})`,
+          },
+        });
+        showToast('User added — pending admin approval', 'warning');
+      } else {
+        showToast('User added');
+      }
+      return id;
+    },
+    updateUser: (id, patch) => { dispatch({ type: 'UPDATE_USER', id, patch }); showToast('User updated'); },
+    deactivateUser: (id) => { dispatch({ type: 'UPDATE_USER', id, patch: { status: 'INACTIVE' } }); showToast('User deactivated'); },
+    reactivateUser: (id) => { dispatch({ type: 'UPDATE_USER', id, patch: { status: 'ACTIVE' } }); showToast('User reactivated'); },
     addCatalogGoal: (goal) => { dispatch({ type: 'ADD_CATALOG_GOAL', goal: { ...goal, id: genId('g') } }); showToast('Goal added to catalog'); },
     addPeriod: (period) => { dispatch({ type: 'ADD_PERIOD', period: { ...period, id: genId('p') } }); showToast('Period added'); },
     updatePeriod: (id, patch) => { dispatch({ type: 'UPDATE_PERIOD', id, patch }); showToast('Period updated'); },
