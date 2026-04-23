@@ -37,6 +37,8 @@ export default function MyGoals() {
         actions={<Button icon={Plus} onClick={() => setProposeOpen(true)}>Self-propose goal</Button>}
       />
 
+      <GoalsMarimekko goals={allGoals} C={C} />
+
       <Row gap={6} style={{ marginBottom: 14, flexWrap: 'wrap' }}>
         {FILTERS.map((f) => (
           <button
@@ -202,5 +204,101 @@ function ProposeModal({ open, onClose, userId, catalog, actions }) {
         >Send for approval</Button>
       </Row>
     </Modal>
+  );
+}
+
+// Marimekko-style chart: column width ∝ goal weight, filled height ∝ completion.
+// Bigger-weighted goals take up more visual real estate, so "where should I
+// focus?" becomes obvious at a glance.
+function GoalsMarimekko({ goals, C }) {
+  if (!goals.length) return null;
+  const eligible = goals.filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED');
+  if (!eligible.length) return null;
+  const total = eligible.reduce((s, g) => s + (g.weight || 0), 0) || 1;
+  const height = 220;
+
+  return (
+    <Card hoverable={false} style={{ marginBottom: 16 }}>
+      <Row style={{ justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <div style={{ color: C.text, fontSize: 15, fontWeight: 700 }}>Goals at a glance</div>
+          <div style={{ color: C.textMuted, fontSize: 12 }}>Width = weight · fill height = completion</div>
+        </div>
+        <Row gap={10} style={{ fontSize: 11, color: C.textMuted }}>
+          <LegendSwatch color={C.success} label="Completed" />
+          <LegendSwatch color={C.accent}  label="On track" />
+          <LegendSwatch color={C.warning} label="At risk" />
+          <LegendSwatch color={C.danger}  label="Off track" />
+        </Row>
+      </Row>
+
+      <div style={{
+        display: 'flex', gap: 4, height, borderRadius: 10, overflow: 'hidden',
+        background: C.surface, padding: 4,
+      }}>
+        {eligible.map((g) => {
+          const widthPct = ((g.weight || 0) / total) * 100;
+          const status = goalStatus(g.completion);
+          const color = statusColor(status, C);
+          return (
+            <div
+              key={g.id}
+              title={`${g.title}\nWeight ${g.weight}% · Completion ${g.completion}%`}
+              style={{
+                flex: widthPct, minWidth: 24, position: 'relative',
+                background: C.card, borderRadius: 8, overflow: 'hidden',
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              <div style={{
+                position: 'absolute', left: 0, right: 0, bottom: 0,
+                height: `${g.completion}%`,
+                background: `linear-gradient(180deg, ${color}, ${color}cc)`,
+                transition: 'height 420ms ease',
+              }} />
+              <div style={{
+                position: 'absolute', top: 6, left: 6, right: 6,
+                color: C.text, fontSize: 10, fontWeight: 700,
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {g.title.split(' ').slice(0, 3).join(' ')}
+              </div>
+              <div style={{
+                position: 'absolute', bottom: 6, left: 6, right: 6,
+                color: '#fff', fontSize: 11, fontWeight: 800,
+                textAlign: 'center', textShadow: '0 1px 2px rgba(0,0,0,0.45)',
+              }}>
+                {g.completion}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+        {eligible.map((g) => {
+          const widthPct = ((g.weight || 0) / total) * 100;
+          return (
+            <div key={g.id} style={{
+              flex: widthPct, minWidth: 24, textAlign: 'center',
+              fontSize: 10, color: C.textMuted, overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              w {g.weight}%
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+function LegendSwatch({ color, label }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
+      {label}
+    </span>
   );
 }
