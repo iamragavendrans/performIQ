@@ -1,8 +1,9 @@
 import { Award, Heart, TrendingUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
+import { useCountUp } from '../../hooks/useCountUp';
 import { PageHeader } from '../../components/layout/Shell';
-import { Badge, Card, Col, Grid, ProgressBar, Row, StatCard } from '../../components/ui';
+import { Badge, Card, Col, Grid, InfoTooltip, ProgressBar, Row } from '../../components/ui';
 import { PROMOTION, statusColor, goalStatus } from '../../lib/compute';
 import { formatDate } from '../../lib/format';
 
@@ -26,10 +27,26 @@ export default function MyRating() {
         subtitle="Data-driven and transparent. Your manager cannot edit these numbers — they are derived from goals and approved life events."
       />
 
-      <Grid columns={3} minWidth={220} style={{ marginBottom: 20 }}>
-        <StatCard icon={Award} label="Raw rating"      value={r.raw.toFixed(1)}      color={C.accent} />
-        <StatCard icon={Heart} label="Adjusted rating" value={r.adjusted.toFixed(1)} color={C.cyan} />
-        <StatCard icon={TrendingUp} label="Uplift factor" value={`×${r.factor.toFixed(3)}`} color={C.success} />
+      <Grid minWidth={220} style={{ marginBottom: 20 }}>
+        <RatingStat
+          icon={Award} label="Raw rating" value={r.raw.toFixed(1)} color={C.accent}
+          tooltip={
+            <>
+              <b>Raw rating.</b> Weighted average of goal completion (completion% × weight%) summed across your goals and divided by total weight.
+              {' '}No empathy uplift applied.
+            </>
+          }
+        />
+        <AdjustedStat raw={r.raw} adjusted={r.adjusted} factor={r.factor} C={C} />
+        <RatingStat
+          icon={TrendingUp} label="Uplift factor" value={`×${r.factor.toFixed(3)}`} color={C.success}
+          tooltip={
+            <>
+              <b>Uplift factor.</b> 1.000 baseline plus 0.003 per approved life-event day, capped at ×1.100.
+              {' '}Only approved events count. This makes the rating system empathy-aware without giving managers a subjective lever.
+            </>
+          }
+        />
       </Grid>
 
       <Grid columns={2} minWidth={320}>
@@ -134,5 +151,48 @@ export default function MyRating() {
         </Card>
       </Grid>
     </>
+  );
+}
+
+function RatingStat({ icon: Icon, label, value, color, tooltip }) {
+  return (
+    <Card hoverable={false}>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <div style={{ background: color + '22', padding: 10, borderRadius: 10 }}>
+          {Icon && <Icon size={20} color={color} />}
+        </div>
+        <InfoTooltip>{tooltip}</InfoTooltip>
+      </Row>
+      <div style={{ fontSize: 13, color: '#9aa7bd', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
+    </Card>
+  );
+}
+
+function AdjustedStat({ raw, adjusted, factor, C }) {
+  const animated = useCountUp(adjusted, { from: raw, duration: 1200, decimals: 1 });
+  const delta = adjusted - raw;
+  return (
+    <Card hoverable={false} style={{ borderLeft: `3px solid ${C.cyan}` }}>
+      <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <div style={{ background: C.cyanDim, padding: 10, borderRadius: 10 }}>
+          <Heart size={20} color={C.cyan} />
+        </div>
+        <InfoTooltip>
+          <b>Adjusted rating.</b> Raw rating × uplift factor from approved life events.
+          {' '}This is what appears on your performance record. Empathy is data-driven — no manager bias.
+        </InfoTooltip>
+      </Row>
+      <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 4 }}>Adjusted rating</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: C.text }}>{animated.toFixed(1)}</div>
+      <div style={{ marginTop: 8, fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
+        <span>Raw {raw.toFixed(1)}</span>
+        <span style={{ color: C.cyan, margin: '0 6px' }}>→</span>
+        <span style={{ color: C.text, fontWeight: 600 }}>{adjusted.toFixed(1)}</span>
+        {delta > 0.05 && (
+          <span style={{ color: C.success, marginLeft: 6 }}>+{delta.toFixed(1)} empathy uplift (×{factor.toFixed(3)})</span>
+        )}
+      </div>
+    </Card>
   );
 }

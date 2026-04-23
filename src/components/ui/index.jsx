@@ -1,6 +1,35 @@
-import { useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Info, X } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
+
+export function InfoTooltip({ children, width = 240 }) {
+  const { C } = useTheme();
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+      tabIndex={0}
+      style={{ position: 'relative', display: 'inline-flex', cursor: 'help', outline: 'none' }}
+    >
+      <Info size={13} color={C.textMuted} />
+      {open && (
+        <span
+          role="tooltip"
+          style={{
+            position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50,
+            background: C.card, color: C.text, border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: 10, fontSize: 12, lineHeight: 1.45, width,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)', textAlign: 'left',
+            animation: 'fadeIn 120ms ease', fontWeight: 400,
+          }}
+        >{children}</span>
+      )}
+    </span>
+  );
+}
 
 export function Badge({ children, color, bg }) {
   const { C } = useTheme();
