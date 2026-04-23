@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Award, Check, Clock } from 'lucide-react';
+import { Award, Check, Clock, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
@@ -7,11 +7,19 @@ import { Avatar, Badge, Button, Card, Col, EmptyState, Modal, Row, TextArea } fr
 import { PROMOTION } from '../../lib/compute';
 import { formatDate } from '../../lib/format';
 
+const TIER_FILTERS = {
+  ALL:         { label: 'All',          match: () => true },
+  ELIGIBLE:    { label: 'Eligible',     match: (t) => t === PROMOTION.ELIGIBLE },
+  APPROACHING: { label: 'Approaching',  match: (t) => t === PROMOTION.APPROACHING },
+  NOT_ELIGIBLE:{ label: 'Not eligible', match: (t) => t === PROMOTION.NOT_ELIGIBLE },
+};
+
 export default function ManagerPromotions() {
-  const { user, teamFor, eligibilityFor, computeRatingFor, state, actions } = useApp();
+  const { user, teamFor, eligibilityFor, computeRatingFor, state, actions, pageParams } = useApp();
   const { C } = useTheme();
   const team = teamFor(user.id);
   const [open, setOpen] = useState(null);
+  const [tierFilter, setTierFilter] = useState(pageParams?.filter || 'ALL');
 
   const existingRec = (employeeId) =>
     state.promotions.find((p) => p.employeeId === employeeId && p.status !== 'REJECTED');
@@ -23,10 +31,30 @@ export default function ManagerPromotions() {
         subtitle="Recommend team members with sustained high performance. Your director makes the final call."
       />
 
+      <Row gap={6} style={{ marginBottom: 14, flexWrap: 'wrap' }}>
+        {Object.entries(TIER_FILTERS).map(([key, f]) => (
+          <button
+            key={key}
+            onClick={() => setTierFilter(key)}
+            style={{
+              padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+              cursor: 'pointer',
+              background: tierFilter === key ? C.accent : 'transparent',
+              color: tierFilter === key ? '#fff' : C.textMuted,
+              border: `1px solid ${tierFilter === key ? C.accent : C.border}`,
+            }}
+          >{f.label}{tierFilter === key && ' ×'}</button>
+        ))}
+        {tierFilter !== 'ALL' && (
+          <Button size="sm" variant="ghost" icon={X} onClick={() => setTierFilter('ALL')}>Clear filter</Button>
+        )}
+      </Row>
+
       <Col gap={10}>
         {team.length === 0 && <Card><EmptyState icon={Award} title="No team members" /></Card>}
         {[...team]
           .map((m) => ({ m, elig: eligibilityFor(m.id), r: computeRatingFor(m.id) }))
+          .filter(({ elig }) => TIER_FILTERS[tierFilter].match(elig.tier))
           .sort((a, b) => {
             const tierRank = { [PROMOTION.ELIGIBLE]: 0, [PROMOTION.APPROACHING]: 1, [PROMOTION.NOT_ELIGIBLE]: 2 };
             const ta = tierRank[a.elig.tier] ?? 3;

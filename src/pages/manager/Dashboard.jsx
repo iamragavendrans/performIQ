@@ -30,11 +30,19 @@ export default function ManagerDashboard() {
         subtitle={isDirector ? 'Health of your managers and, transitively, their teams.' : 'Your team’s progress this period.'}
       />
 
-      <Grid columns={4} minWidth={220} style={{ marginBottom: 20 }}>
-        <StatCard icon={Users} label={isDirector ? 'Managers' : 'Team size'} value={team.length} color={C.accent} />
-        <StatCard icon={Award} label="Avg adjusted rating" value={avgRating.toFixed(1)} color={C.purple} />
-        <StatCard icon={CheckCircle} label="Pending approvals" value={pendingApprovals} color={pendingApprovals ? C.warning : C.success} />
-        <StatCard icon={TrendingUp} label="Promotion-eligible" value={eligibleCount} color={C.cyan} />
+      <Grid minWidth={220} style={{ marginBottom: 20 }}>
+        <Card onClick={() => setPage('my-team')}>
+          <StatCard icon={Users} label={isDirector ? 'Managers' : 'Team size'} value={team.length} color={C.accent} />
+        </Card>
+        <Card onClick={() => setPage('reports')}>
+          <StatCard icon={Award} label="Avg adjusted rating" value={avgRating.toFixed(1)} color={C.purple} />
+        </Card>
+        <Card onClick={() => setPage('approvals')}>
+          <StatCard icon={CheckCircle} label="Pending approvals" value={pendingApprovals} color={pendingApprovals ? C.warning : C.success} />
+        </Card>
+        <Card onClick={() => setPage('promotions', { filter: 'ELIGIBLE' })}>
+          <StatCard icon={TrendingUp} label="Promotion-eligible" value={eligibleCount} color={C.cyan} />
+        </Card>
       </Grid>
 
       <Card hoverable={false} style={{ marginBottom: 20 }}>
@@ -49,7 +57,11 @@ export default function ManagerDashboard() {
             const r = computeRatingFor(m.id);
             const elig = eligibilityFor(m.id);
             return (
-              <Row key={m.id} gap={12} style={{ padding: 10, borderRadius: 10, background: C.surface }}>
+              <Row
+                key={m.id} gap={12}
+                onClick={() => setPage('reports', { focus: m.id })}
+                style={{ padding: 10, borderRadius: 10, background: C.surface, cursor: 'pointer' }}
+              >
                 <Avatar name={m.name} color={m.avatar} size={34} />
                 <Col gap={2} style={{ flex: 1, minWidth: 0 }}>
                   <Row style={{ justifyContent: 'space-between' }}>

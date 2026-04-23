@@ -8,11 +8,15 @@ import { formatDate, daysBetween } from '../../lib/format';
 
 const TYPES = ['Medical Leave', 'Personal Emergency', 'Bereavement', 'Sabbatical', 'Parental Leave'];
 
+const FILTERS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED'];
+
 export default function LifeEvents() {
-  const { user, state, actions } = useApp();
+  const { user, state, actions, pageParams } = useApp();
   const { C } = useTheme();
-  const events = state.lifeEvents[user.id] || [];
+  const allEvents = state.lifeEvents[user.id] || [];
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState(pageParams?.filter || 'ALL');
+  const events = filter === 'ALL' ? allEvents : allEvents.filter((e) => e.status === filter);
 
   const statusColor = (s) => s === 'APPROVED' ? C.success : s === 'REJECTED' ? C.danger : C.warning;
   const statusBg    = (s) => s === 'APPROVED' ? C.successDim : s === 'REJECTED' ? C.dangerDim : C.warningDim;
@@ -25,8 +29,24 @@ export default function LifeEvents() {
         actions={<Button icon={Plus} onClick={() => setOpen(true)}>Record event</Button>}
       />
 
+      <Row gap={6} style={{ marginBottom: 14, flexWrap: 'wrap' }}>
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            style={{
+              padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+              cursor: 'pointer',
+              background: filter === f ? C.accent : 'transparent',
+              color: filter === f ? '#fff' : C.textMuted,
+              border: `1px solid ${filter === f ? C.accent : C.border}`,
+            }}
+          >{f}</button>
+        ))}
+      </Row>
+
       {events.length === 0
-        ? <Card><EmptyState icon={Heart} title="No life events recorded" subtitle="Nothing to show — submit one if relevant." action={<Button icon={Plus} onClick={() => setOpen(true)}>Record event</Button>} /></Card>
+        ? <Card><EmptyState icon={Heart} title="No life events in this view" subtitle="Try a different filter or submit a new event." action={<Button icon={Plus} onClick={() => setOpen(true)}>Record event</Button>} /></Card>
         : (
           <Col gap={10}>
             {events.map((e) => (

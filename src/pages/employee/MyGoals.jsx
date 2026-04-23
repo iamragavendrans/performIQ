@@ -15,15 +15,19 @@ const STATUS_ICONS = {
 };
 
 export default function MyGoals() {
-  const { user, goalsFor, state, actions } = useApp();
+  const { user, goalsFor, state, actions, pageParams } = useApp();
   const { C } = useTheme();
-  const goals = useMemo(
+  const [statusFilter, setStatusFilter] = useState(pageParams?.filter || 'ALL');
+  const allGoals = useMemo(
     () => [...goalsFor(user.id)].sort((a, b) => statusOrder(a.status) - statusOrder(b.status)),
     [goalsFor, user.id]
   );
+  const goals = statusFilter === 'ALL' ? allGoals : allGoals.filter((g) => g.status === statusFilter);
   const [updateOpen, setUpdateOpen] = useState(null);
   const [weightOpen, setWeightOpen] = useState(null);
   const [proposeOpen, setProposeOpen] = useState(false);
+
+  const FILTERS = ['ALL', ...Object.values(GOAL_STATUS)];
 
   return (
     <>
@@ -33,8 +37,24 @@ export default function MyGoals() {
         actions={<Button icon={Plus} onClick={() => setProposeOpen(true)}>Self-propose goal</Button>}
       />
 
+      <Row gap={6} style={{ marginBottom: 14, flexWrap: 'wrap' }}>
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setStatusFilter(f)}
+            style={{
+              padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+              cursor: 'pointer',
+              background: statusFilter === f ? C.accent : 'transparent',
+              color: statusFilter === f ? '#fff' : C.textMuted,
+              border: `1px solid ${statusFilter === f ? C.accent : C.border}`,
+            }}
+          >{f.replace('_', ' ')}</button>
+        ))}
+      </Row>
+
       <Col gap={14}>
-        {goals.length === 0 && <Card>No goals yet. Self-propose one to get started.</Card>}
+        {goals.length === 0 && <Card>No goals in this view.</Card>}
         {goals.map((g) => {
           const Icon = STATUS_ICONS[g.status] || Target;
           const pendingProposal = g.selfProposed && g.proposalStatus === 'PENDING';

@@ -24,11 +24,19 @@ export default function EmployeeDashboard() {
   return (
     <>
       <PageHeader title={`Welcome back, ${user.name.split(' ')[0]}`} subtitle={`Your ${state.periods.find((p) => p.isActive)?.name} progress at a glance`} />
-      <Grid columns={4} minWidth={220} style={{ marginBottom: 24 }}>
-        <StatCard icon={Target}   label="Active goals"       value={activeGoals.length} color={C.accent} />
-        <StatCard icon={CheckCircle} label="Completed"       value={activeGoals.filter((g) => g.status === GOAL_STATUS.COMPLETED).length} color={C.success} />
-        <StatCard icon={Award}    label="Current rating"     value={`${rating.adjusted.toFixed(1)}`} color={C.purple} />
-        <StatCard icon={Heart}    label="Approved life events" value={lifeEvents.filter((e) => e.status === 'APPROVED').length} color={C.cyan} />
+      <Grid minWidth={220} style={{ marginBottom: 24 }}>
+        <Card onClick={() => setPage('my-goals')}>
+          <StatCard icon={Target} label="Active goals" value={activeGoals.length} color={C.accent} />
+        </Card>
+        <Card onClick={() => setPage('my-goals', { filter: 'COMPLETED' })}>
+          <StatCard icon={CheckCircle} label="Completed" value={activeGoals.filter((g) => g.status === GOAL_STATUS.COMPLETED).length} color={C.success} />
+        </Card>
+        <Card onClick={() => setPage('my-rating')}>
+          <StatCard icon={Award} label="Current rating" value={`${rating.adjusted.toFixed(1)}`} color={C.purple} />
+        </Card>
+        <Card onClick={() => setPage('life-events', { filter: 'APPROVED' })}>
+          <StatCard icon={Heart} label="Approved life events" value={lifeEvents.filter((e) => e.status === 'APPROVED').length} color={C.cyan} />
+        </Card>
       </Grid>
 
       <Grid columns={2} minWidth={320}>

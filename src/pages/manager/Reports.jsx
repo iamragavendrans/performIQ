@@ -13,10 +13,10 @@ const SORTS = {
 };
 
 export default function ManagerReports() {
-  const { user, teamFor, goalsFor, computeRatingFor, state } = useApp();
+  const { user, teamFor, goalsFor, computeRatingFor, state, pageParams } = useApp();
   const { C } = useTheme();
   const team = teamFor(user.id);
-  const [focus, setFocus] = useState('ALL');
+  const [focus, setFocus] = useState(pageParams?.focus || 'ALL');
   const [sortKey, setSortKey] = useState('RATING_DESC');
 
   const member = focus === 'ALL' ? null : team.find((m) => m.id === focus);

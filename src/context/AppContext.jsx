@@ -135,9 +135,16 @@ const reducer = (state, action) => {
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, null, () => loadState() || buildInitialState());
   const [user, setUser] = useState(null);
-  const [page, setPage] = useState('dashboard');
+  const [page, setPageInternal] = useState('dashboard');
+  const [pageParams, setPageParams] = useState({});
   const [managerMode, setManagerMode] = useState(true); // managers default to their manager surface
   const [toast, setToast] = useState(null);
+
+  // Navigate with optional query-like params consumed by the target page.
+  const setPage = useCallback((target, params = {}) => {
+    setPageInternal(target);
+    setPageParams(params);
+  }, []);
 
   useEffect(() => { saveState(state); }, [state]);
 
@@ -158,9 +165,9 @@ export function AppProvider({ children }) {
       return true;
     }
     return false;
-  }, [state.users, state.passwords]);
+  }, [state.users, state.passwords, setPage]);
 
-  const logout = useCallback(() => { setUser(null); setPage('dashboard'); }, []);
+  const logout = useCallback(() => { setUser(null); setPage('dashboard'); }, [setPage]);
 
   // --- Lookups -------------------------------------------------------------
   const findUser = useCallback((id) => state.users.find((u) => u.id === id), [state.users]);
@@ -373,7 +380,7 @@ export function AppProvider({ children }) {
   }), [state, findUser, showToast]);
 
   const value = {
-    state, user, page, setPage, managerMode, setManagerMode,
+    state, user, page, setPage, pageParams, managerMode, setManagerMode,
     toast, showToast,
     login, logout,
     findUser, teamFor, goalTitle, goalsFor, eligibilityFor, activePeriod,
