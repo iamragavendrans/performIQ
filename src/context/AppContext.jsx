@@ -7,6 +7,7 @@ import { computePromotionEligibility, computeRating, goalStatus } from '../lib/c
 import { isOverdue } from '../lib/format';
 
 const AppContext = createContext(null);
+// eslint-disable-next-line react-refresh/only-export-components
 export const useApp = () => useContext(AppContext);
 
 // --- Reducer ---------------------------------------------------------------

@@ -53,7 +53,7 @@ export default function AIFeedback() {
           <Col gap={12}>
             <div style={{ padding: 12, background: C.surface, borderRadius: 10, fontSize: 13, color: C.textMuted }}>
               <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>{manager ? manager.name : 'Your manager'}</div>
-              Weight distribution reflects {manager?.name?.split(' ')[0] || 'your manager'}'s priorities. The highest-weight goals signal what they consider most important this period.
+              Weight distribution reflects {manager?.name?.split(' ')[0] || 'your manager'}&rsquo;s priorities. The highest-weight goals signal what they consider most important this period.
             </div>
             {goals.filter((g) => g.weight >= 20).map((g) => (
               <Row key={g.id} gap={8} style={{ fontSize: 12, color: C.textMuted }}>

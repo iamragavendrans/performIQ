@@ -63,7 +63,7 @@ export default function ManagerPromotions() {
                 ))}
                 {existing && (
                   <div style={{ marginTop: 6, padding: 8, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
-                    Recommended on {formatDate(existing.date)} — "{existing.reason}"
+                    Recommended on {formatDate(existing.date)} — &ldquo;{existing.reason}&rdquo;
                   </div>
                 )}
               </Col>

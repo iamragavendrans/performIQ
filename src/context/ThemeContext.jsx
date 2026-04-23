@@ -1,6 +1,7 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
 import { getTokens } from '../styles/tokens';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ThemeContext = createContext({ C: getTokens(true), isDark: true, toggle: () => {} });
 
 const KEY = 'performiq:theme';

@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Users, Plus, Target } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Avatar, Badge, Button, Card, Col, Input, Modal, ProgressBar, Row, Select } from '../../components/ui';
+import { Avatar, Badge, Button, Card, Col, Input, Modal, Row, Select } from '../../components/ui';
 import { goalStatus, statusColor } from '../../lib/compute';
 
 export default function MyTeam() {

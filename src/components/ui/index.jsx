@@ -257,7 +257,7 @@ export function Col({ children, gap = 12, style }) {
   return <div style={{ display: 'flex', flexDirection: 'column', gap, ...style }}>{children}</div>;
 }
 
-export function Grid({ children, columns = 3, gap = 16, minWidth = 240, style }) {
+export function Grid({ children, gap = 16, minWidth = 240, style }) {
   return (
     <div style={{
       display: 'grid', gap,

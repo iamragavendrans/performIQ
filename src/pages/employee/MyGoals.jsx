@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
 import { Badge, Button, Card, Col, Input, Modal, ProgressBar, Row, Select, TextArea } from '../../components/ui';
-import { GOAL_STATUS, goalStatus, statusBg, statusColor, statusOrder } from '../../lib/compute';
+import { GOAL_STATUS, goalStatus, statusColor, statusOrder } from '../../lib/compute';
 import { formatDate } from '../../lib/format';
 
 const STATUS_ICONS = {
@@ -163,7 +163,7 @@ function ProposeModal({ open, onClose, userId, catalog, actions }) {
   return (
     <Modal open={open} onClose={onClose} title="Self-propose a goal">
       <p style={{ fontSize: 13, color: '#888', marginBottom: 14 }}>
-        Describe a goal you're already working on. Your manager will review and approve; once approved it will contribute to your rating.
+        Describe a goal you&rsquo;re already working on. Your manager will review and approve; once approved it will contribute to your rating.
       </p>
       <Input label="Goal title" value={title} onChange={setTitle} placeholder="e.g., Add dark-mode tokens to design system" />
       <Select label="Category" value={category} onChange={setCategory} options={categoryOptions} />
