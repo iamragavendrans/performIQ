@@ -5,12 +5,21 @@ import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
 import { Avatar, Badge, Button, Card, Col, Input, Modal, Row, Select } from '../../components/ui';
 import { goalStatus, statusColor } from '../../lib/compute';
+import { ROLES } from '../../lib/roles';
 
 export default function MyTeam() {
-  const { user, teamFor, goalsFor, state, actions } = useApp();
+  const { user, teamFor, goalsFor, state, actions, computeRatingFor } = useApp();
   const { C } = useTheme();
   const team = teamFor(user.id);
   const [assignOpen, setAssignOpen] = useState(null);
+  const isDirector = user.role === ROLES.DIRECTOR;
+
+  // For each member, if they themselves have reports, the avg adjusted rating of their reports.
+  const teamAvgFor = (memberId) => {
+    const reports = state.users.filter((u) => u.managerId === memberId);
+    if (!reports.length) return null;
+    return reports.reduce((s, r) => s + computeRatingFor(r.id).adjusted, 0) / reports.length;
+  };
 
   // Deduplicated list of all goal catalog entries active across the team.
   const activeGoalIds = useMemo(() => {
@@ -27,7 +36,12 @@ export default function MyTeam() {
 
   return (
     <>
-      <PageHeader title="My Team" subtitle="Deduplicated goal × member heatmap. Numbers show completion %." />
+      <PageHeader
+        title={isDirector ? 'My Managers' : 'My Team'}
+        subtitle={isDirector
+          ? 'Each manager and the rolled-up rating of the team they lead — you are accountable for both.'
+          : 'Deduplicated goal × member heatmap. Numbers show completion %.'}
+      />
 
       <Card hoverable={false} style={{ marginBottom: 20, overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12, minWidth: 560 }}>
@@ -42,35 +56,53 @@ export default function MyTeam() {
                   </th>
                 );
               })}
+              {isDirector && (
+                <th style={{ padding: 8, color: C.textMuted, borderBottom: `1px solid ${C.border}`, textAlign: 'center', minWidth: 110, borderLeft: `1px solid ${C.border}` }}>
+                  Team avg
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
-            {team.map((m) => (
-              <tr key={m.id}>
-                <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>
-                  <Row gap={8}>
-                    <Avatar name={m.name} color={m.avatar} size={28} />
-                    <Col gap={0}>
-                      <div style={{ color: C.text, fontWeight: 600 }}>{m.name}</div>
-                      <div style={{ color: C.textSub, fontSize: 11 }}>{m.title}</div>
-                    </Col>
-                  </Row>
-                </td>
-                {activeGoalIds.map((gId) => {
-                  const v = heatmapCell(m.id, gId);
-                  const color = v == null ? 'transparent' : statusColor(goalStatus(v), C) + '33';
-                  const textColor = v == null ? C.textSub : statusColor(goalStatus(v), C);
-                  return (
-                    <td key={gId} style={{
+            {team.map((m) => {
+              const teamAvg = teamAvgFor(m.id);
+              return (
+                <tr key={m.id}>
+                  <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>
+                    <Row gap={8}>
+                      <Avatar name={m.name} color={m.avatar} size={28} />
+                      <Col gap={0}>
+                        <div style={{ color: C.text, fontWeight: 600 }}>{m.name}</div>
+                        <div style={{ color: C.textSub, fontSize: 11 }}>{m.title}</div>
+                      </Col>
+                    </Row>
+                  </td>
+                  {activeGoalIds.map((gId) => {
+                    const v = heatmapCell(m.id, gId);
+                    const color = v == null ? 'transparent' : statusColor(goalStatus(v), C) + '33';
+                    const textColor = v == null ? C.textSub : statusColor(goalStatus(v), C);
+                    return (
+                      <td key={gId} style={{
+                        padding: 8, borderBottom: `1px solid ${C.border}`, textAlign: 'center',
+                        background: color, color: textColor, fontWeight: 700,
+                      }}>
+                        {v == null ? '—' : `${v}%`}
+                      </td>
+                    );
+                  })}
+                  {isDirector && (
+                    <td style={{
                       padding: 8, borderBottom: `1px solid ${C.border}`, textAlign: 'center',
-                      background: color, color: textColor, fontWeight: 700,
+                      background: teamAvg == null ? 'transparent' : statusColor(goalStatus(teamAvg), C) + '33',
+                      color: teamAvg == null ? C.textSub : statusColor(goalStatus(teamAvg), C),
+                      fontWeight: 700, borderLeft: `1px solid ${C.border}`,
                     }}>
-                      {v == null ? '—' : `${v}%`}
+                      {teamAvg == null ? '—' : `${teamAvg.toFixed(1)}`}
                     </td>
-                  );
-                })}
-              </tr>
-            ))}
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </Card>

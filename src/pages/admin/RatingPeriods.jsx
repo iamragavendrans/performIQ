@@ -21,7 +21,9 @@ export default function RatingPeriods() {
       />
 
       <Col gap={10}>
-        {state.periods.map((p) => (
+        {[...state.periods]
+          .sort((a, b) => new Date(b.start) - new Date(a.start))
+          .map((p) => (
           <Card key={p.id} hoverable={false} style={{ borderLeft: `3px solid ${p.isActive ? C.success : C.border}` }}>
             <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <Row gap={10}>

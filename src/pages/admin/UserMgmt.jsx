@@ -3,8 +3,11 @@ import { Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Avatar, Badge, Button, Card, Input, Modal, Row, Select } from '../../components/ui';
+import { Avatar, Badge, Button, Card, Col, Input, Modal, Row, Select } from '../../components/ui';
 import { ROLES, canManagePeople } from '../../lib/roles';
+
+// Smallest populated list first — matches the org pyramid from the top.
+const ROLE_ORDER = [ROLES.ADMIN, ROLES.DIRECTOR, ROLES.MANAGER, ROLES.EMPLOYEE];
 
 export default function UserMgmt() {
   const { state, actions } = useApp();
@@ -12,6 +15,10 @@ export default function UserMgmt() {
   const [open, setOpen] = useState(false);
 
   const roleColor = (r) => r === ROLES.ADMIN ? C.purple : r === ROLES.DIRECTOR ? C.cyan : r === ROLES.MANAGER ? C.accent : C.textMuted;
+
+  const usersByRole = ROLE_ORDER
+    .map((role) => ({ role, users: state.users.filter((u) => u.role === role) }))
+    .filter((s) => s.users.length > 0);
 
   return (
     <>
@@ -21,35 +28,42 @@ export default function UserMgmt() {
         actions={<Button icon={Plus} onClick={() => setOpen(true)}>Add user</Button>}
       />
 
-      <Card hoverable={false}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr>
-              {['Name', 'Role', 'Team / Group', 'Manager', 'Email'].map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: 10, color: C.textMuted, borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {state.users.map((u) => {
-              const mgr = state.users.find((x) => x.id === u.managerId);
-              return (
-                <tr key={u.id}>
-                  <td style={{ padding: 10, borderBottom: `1px solid ${C.border}` }}>
-                    <Row gap={8}><Avatar name={u.name} color={u.avatar} size={28} /><span style={{ color: C.text }}>{u.name}</span></Row>
-                  </td>
-                  <td style={{ padding: 10, borderBottom: `1px solid ${C.border}` }}>
-                    <Badge color={roleColor(u.role)} bg={roleColor(u.role) + '22'}>{u.role}</Badge>
-                  </td>
-                  <td style={{ padding: 10, borderBottom: `1px solid ${C.border}`, color: C.textMuted }}>{u.group || '—'}</td>
-                  <td style={{ padding: 10, borderBottom: `1px solid ${C.border}`, color: C.textMuted }}>{mgr?.name || '—'}</td>
-                  <td style={{ padding: 10, borderBottom: `1px solid ${C.border}`, color: C.textMuted }}>{u.email}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
+      <Col gap={20}>
+        {usersByRole.map(({ role, users }) => (
+          <div key={role}>
+            <Row style={{ marginBottom: 10 }} gap={8}>
+              <Badge color={roleColor(role)} bg={roleColor(role) + '22'}>{role}</Badge>
+              <div style={{ color: C.textMuted, fontSize: 12 }}>{users.length} user{users.length === 1 ? '' : 's'}</div>
+            </Row>
+            <Card hoverable={false}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    {['Name', 'Team / Group', 'Manager', 'Email'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: 10, color: C.textMuted, borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...users].sort((a, b) => a.name.localeCompare(b.name)).map((u) => {
+                    const mgr = state.users.find((x) => x.id === u.managerId);
+                    return (
+                      <tr key={u.id}>
+                        <td style={{ padding: 10, borderBottom: `1px solid ${C.border}` }}>
+                          <Row gap={8}><Avatar name={u.name} color={u.avatar} size={28} /><span style={{ color: C.text }}>{u.name}</span></Row>
+                        </td>
+                        <td style={{ padding: 10, borderBottom: `1px solid ${C.border}`, color: C.textMuted }}>{u.group || '—'}</td>
+                        <td style={{ padding: 10, borderBottom: `1px solid ${C.border}`, color: C.textMuted }}>{mgr?.name || '—'}</td>
+                        <td style={{ padding: 10, borderBottom: `1px solid ${C.border}`, color: C.textMuted }}>{u.email}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Card>
+          </div>
+        ))}
+      </Col>
 
       <AddUserModal open={open} onClose={() => setOpen(false)} state={state} actions={actions} />
     </>

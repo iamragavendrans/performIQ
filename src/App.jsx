@@ -33,21 +33,30 @@ function Router() {
   if (!user) return <><Login /><Toast toast={toast} /></>;
 
   const isManagerLike = user.role === ROLES.MANAGER || user.role === ROLES.DIRECTOR;
-  const useManagerSurface = isManagerLike && managerMode;
+  const useDirectorSurface = user.role === ROLES.DIRECTOR && managerMode;
+  const useManagerSurface = user.role === ROLES.MANAGER && managerMode;
   const useAdminSurface = user.role === ROLES.ADMIN;
+  void isManagerLike;
 
   let content = null;
   if (useAdminSurface) {
     content = {
-      dashboard:  <AdminDashboard />,
-      users:      <UserMgmt />,
-      catalog:    <GoalCatalog />,
-      periods:    <RatingPeriods />,
-      groups:     <Groups />,
-      approvals:  <AdminApprovals />,
-      promotions: <AdminPromotions />,
-      reports:    <OrgReport />,
+      dashboard: <AdminDashboard />,
+      users:     <UserMgmt />,
+      catalog:   <GoalCatalog />,
+      periods:   <RatingPeriods />,
+      groups:    <Groups />,
+      approvals: <AdminApprovals />,
     }[page] || <AdminDashboard />;
+  } else if (useDirectorSurface) {
+    content = {
+      dashboard:    <MgrDashboard />,
+      'my-team':    <MyTeam />,
+      'goals-mgmt': <MgrGoalMgmt />,
+      approvals:    <MgrApprovals />,
+      promotions:   <AdminPromotions />,
+      reports:      <OrgReport />,
+    }[page] || <MgrDashboard />;
   } else if (useManagerSurface) {
     content = {
       dashboard:    <MgrDashboard />,

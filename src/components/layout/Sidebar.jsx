@@ -22,6 +22,16 @@ const MANAGER_MENU = [
   { id: 'promotions', label: 'Promotions',    icon: Award },
 ];
 
+// Director oversees the org: gets manager-like team view plus promotion approvals and org report.
+const DIRECTOR_MENU = [
+  { id: 'dashboard',  label: 'Dashboard',     icon: Home },
+  { id: 'my-team',    label: 'My Managers',   icon: Users },
+  { id: 'goals-mgmt', label: 'Goal Mgmt',     icon: Target },
+  { id: 'approvals',  label: 'Approvals',     icon: CheckCircle },
+  { id: 'promotions', label: 'Promotions',    icon: Award },
+  { id: 'reports',    label: 'Org Report',    icon: FileText },
+];
+
 const ADMIN_MENU = [
   { id: 'dashboard',  label: 'Org Dashboard', icon: Home },
   { id: 'users',      label: 'User Mgmt',     icon: Users },
@@ -29,8 +39,6 @@ const ADMIN_MENU = [
   { id: 'periods',    label: 'Rating Periods',icon: Calendar },
   { id: 'groups',     label: 'Groups',        icon: Layers },
   { id: 'approvals',  label: 'Approvals',     icon: Shield },
-  { id: 'promotions', label: 'Promotions',    icon: Award },
-  { id: 'reports',    label: 'Org Report',    icon: FileText },
 ];
 
 export default function Sidebar() {
@@ -41,6 +49,7 @@ export default function Sidebar() {
   const isManager = user.role === ROLES.MANAGER || user.role === ROLES.DIRECTOR;
   const menu =
     user.role === ROLES.ADMIN ? ADMIN_MENU :
+    user.role === ROLES.DIRECTOR && managerMode ? DIRECTOR_MENU :
     isManager && managerMode ? MANAGER_MENU :
     EMPLOYEE_MENU;
 

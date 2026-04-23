@@ -6,19 +6,30 @@ import { PageHeader } from '../../components/layout/Shell';
 import { Avatar, Badge, Card, Col, ProgressBar, Row, Select } from '../../components/ui';
 import { goalStatus, healthColor, statusColor, teamHealth } from '../../lib/compute';
 
+const SORTS = {
+  NAME_ASC:   { label: 'Name (A→Z)',     cmp: (a, b) => a.m.name.localeCompare(b.m.name) },
+  RATING_DESC:{ label: 'Rating (high→low)', cmp: (a, b) => b.rating - a.rating },
+  RATING_ASC: { label: 'Rating (low→high)', cmp: (a, b) => a.rating - b.rating },
+};
+
 export default function ManagerReports() {
   const { user, teamFor, goalsFor, computeRatingFor, state } = useApp();
   const { C } = useTheme();
   const team = teamFor(user.id);
   const [focus, setFocus] = useState('ALL');
+  const [sortKey, setSortKey] = useState('RATING_DESC');
 
   const member = focus === 'ALL' ? null : team.find((m) => m.id === focus);
 
-  const teamChartData = team.map((m) => ({
-    name: m.name.split(' ')[0],
-    rating: Number(computeRatingFor(m.id).adjusted.toFixed(1)),
-    health: teamHealth(goalsFor(m.id)),
-  }));
+  const rows = team
+    .map((m) => ({
+      m,
+      rating: Number(computeRatingFor(m.id).adjusted.toFixed(1)),
+      health: teamHealth(goalsFor(m.id)),
+    }))
+    .sort(SORTS[sortKey].cmp);
+
+  const teamChartData = rows.map((x) => ({ name: x.m.name.split(' ')[0], rating: x.rating, health: x.health }));
 
   return (
     <>
@@ -30,12 +41,20 @@ export default function ManagerReports() {
       <Card hoverable={false} style={{ marginBottom: 16 }}>
         <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ color: C.text, fontSize: 16 }}>Team rating distribution</h3>
-          <Select
-            value={focus}
-            onChange={setFocus}
-            options={[{ value: 'ALL', label: 'All members' }, ...team.map((m) => ({ value: m.id, label: m.name }))]}
-            style={{ minWidth: 220, marginBottom: 0 }}
-          />
+          <Row gap={8}>
+            <Select
+              value={sortKey}
+              onChange={setSortKey}
+              options={Object.entries(SORTS).map(([k, v]) => ({ value: k, label: `Sort: ${v.label}` }))}
+              style={{ minWidth: 180, marginBottom: 0 }}
+            />
+            <Select
+              value={focus}
+              onChange={setFocus}
+              options={[{ value: 'ALL', label: 'All members' }, ...rows.map(({ m }) => ({ value: m.id, label: m.name }))]}
+              style={{ minWidth: 220, marginBottom: 0 }}
+            />
+          </Row>
         </Row>
         <div style={{ height: 280, marginTop: 16 }}>
           <ResponsiveContainer>
@@ -58,31 +77,26 @@ export default function ManagerReports() {
         <MemberDetail member={member} goals={goalsFor(member.id)} rating={computeRatingFor(member.id)} C={C} state={state} />
       ) : (
         <Col gap={10}>
-          {team.map((m) => {
-            const goals = goalsFor(m.id);
-            const r = computeRatingFor(m.id);
-            const health = teamHealth(goals);
-            return (
-              <Card key={m.id} hoverable={false}>
-                <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-                  <Row gap={10}>
-                    <Avatar name={m.name} color={m.avatar} size={34} />
-                    <Col gap={2}>
-                      <div style={{ color: C.text, fontWeight: 600 }}>{m.name}</div>
-                      <div style={{ color: C.textMuted, fontSize: 12 }}>{m.title}</div>
-                    </Col>
-                  </Row>
-                  <Row gap={14}>
-                    <Col gap={2} style={{ alignItems: 'flex-end' }}>
-                      <div style={{ color: C.textMuted, fontSize: 11 }}>Adjusted rating</div>
-                      <div style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>{r.adjusted.toFixed(1)}</div>
-                    </Col>
-                    <Badge color={healthColor(health, C)} bg={healthColor(health, C) + '22'}>{health}</Badge>
-                  </Row>
+          {rows.map(({ m, rating, health }) => (
+            <Card key={m.id} onClick={() => setFocus(m.id)}>
+              <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                <Row gap={10}>
+                  <Avatar name={m.name} color={m.avatar} size={34} />
+                  <Col gap={2}>
+                    <div style={{ color: C.text, fontWeight: 600 }}>{m.name}</div>
+                    <div style={{ color: C.textMuted, fontSize: 12 }}>{m.title}</div>
+                  </Col>
                 </Row>
-              </Card>
-            );
-          })}
+                <Row gap={14}>
+                  <Col gap={2} style={{ alignItems: 'flex-end' }}>
+                    <div style={{ color: C.textMuted, fontSize: 11 }}>Adjusted rating</div>
+                    <div style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>{rating.toFixed(1)}</div>
+                  </Col>
+                  <Badge color={healthColor(health, C)} bg={healthColor(health, C) + '22'}>{health}</Badge>
+                </Row>
+              </Row>
+            </Card>
+          ))}
         </Col>
       )}
     </>

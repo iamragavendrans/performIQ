@@ -53,13 +53,13 @@ export const teamHealth = (goals) => {
   const avg = goals.reduce((s, g) => s + (g.completion || 0), 0) / goals.length;
   const hasOff = goals.some((g) => goalStatus(g.completion) === GOAL_STATUS.OFF_TRACK);
   const hasWarn = goals.some((g) => goalStatus(g.completion) === GOAL_STATUS.NEEDS_ATTENTION);
-  if (hasOff || avg < 60) return 'RED';
-  if (hasWarn || avg < 75) return 'YELLOW';
-  return 'GREEN';
+  if (hasOff || avg < 60) return 'Critical';
+  if (hasWarn || avg < 75) return 'At Risk';
+  return 'Healthy';
 };
 
 export const healthColor = (h, C) =>
-  h === 'RED' ? C.danger : h === 'YELLOW' ? C.warning : C.success;
+  h === 'Critical' ? C.danger : h === 'At Risk' ? C.warning : C.success;
 
 // Promotion eligibility tiers: NOT_ELIGIBLE | APPROACHING | ELIGIBLE
 // Signals: (1) sustained over-target adjusted rating in last 2 periods,

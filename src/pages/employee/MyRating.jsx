@@ -79,25 +79,27 @@ export default function MyRating() {
         <Card hoverable={false}>
           <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Rating history</h3>
           <Col gap={8}>
-            {history.map((h) => {
-              const period = state.periods.find((p) => p.id === h.periodId);
-              return (
-                <Row key={h.periodId} style={{ justifyContent: 'space-between', fontSize: 13 }}>
-                  <div style={{ color: C.text }}>{period?.name || h.periodId}</div>
-                  <Row gap={12}>
-                    <div style={{ color: C.textMuted }}>Raw {h.raw.toFixed(1)}</div>
-                    <div style={{ color: C.cyan, fontWeight: 600 }}>Adjusted {h.adjusted.toFixed(1)}</div>
-                  </Row>
-                </Row>
-              );
-            })}
-            <Row style={{ justifyContent: 'space-between', fontSize: 13, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+            <Row style={{ justifyContent: 'space-between', fontSize: 13, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
               <div style={{ color: C.text }}>{state.periods.find((p) => p.isActive)?.name} (current)</div>
               <Row gap={12}>
                 <div style={{ color: C.textMuted }}>Raw {r.raw.toFixed(1)}</div>
                 <div style={{ color: C.cyan, fontWeight: 700 }}>Adjusted {r.adjusted.toFixed(1)}</div>
               </Row>
             </Row>
+            {[...history]
+              .sort((a, b) => new Date(b.endDate) - new Date(a.endDate))
+              .map((h) => {
+                const period = state.periods.find((p) => p.id === h.periodId);
+                return (
+                  <Row key={h.periodId} style={{ justifyContent: 'space-between', fontSize: 13 }}>
+                    <div style={{ color: C.text }}>{period?.name || h.periodId}</div>
+                    <Row gap={12}>
+                      <div style={{ color: C.textMuted }}>Raw {h.raw.toFixed(1)}</div>
+                      <div style={{ color: C.cyan, fontWeight: 600 }}>Adjusted {h.adjusted.toFixed(1)}</div>
+                    </Row>
+                  </Row>
+                );
+              })}
           </Col>
         </Card>
 

@@ -20,14 +20,21 @@ export default function ManagerPromotions() {
     <>
       <PageHeader
         title="Promotions"
-        subtitle="Recommend team members with sustained high performance for promotion. Admin makes the final call."
+        subtitle="Recommend team members with sustained high performance. Your director makes the final call."
       />
 
       <Col gap={10}>
         {team.length === 0 && <Card><EmptyState icon={Award} title="No team members" /></Card>}
-        {team.map((m) => {
-          const elig = eligibilityFor(m.id);
-          const r = computeRatingFor(m.id);
+        {[...team]
+          .map((m) => ({ m, elig: eligibilityFor(m.id), r: computeRatingFor(m.id) }))
+          .sort((a, b) => {
+            const tierRank = { [PROMOTION.ELIGIBLE]: 0, [PROMOTION.APPROACHING]: 1, [PROMOTION.NOT_ELIGIBLE]: 2 };
+            const ta = tierRank[a.elig.tier] ?? 3;
+            const tb = tierRank[b.elig.tier] ?? 3;
+            if (ta !== tb) return ta - tb;
+            return b.r.adjusted - a.r.adjusted;
+          })
+          .map(({ m, elig, r }) => {
           const existing = existingRec(m.id);
           const tierColor = elig.tier === PROMOTION.ELIGIBLE ? C.success : elig.tier === PROMOTION.APPROACHING ? C.warning : C.textMuted;
           return (

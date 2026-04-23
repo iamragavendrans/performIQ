@@ -1,79 +1,68 @@
-import { BarChart, Bar, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Users, Target, Award, Heart, Shield } from 'lucide-react';
+import { Users, Target, Shield, Calendar, Layers } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Badge, Card, Col, Grid, Row, StatCard } from '../../components/ui';
-import { PROMOTION, healthColor, teamHealth } from '../../lib/compute';
+import { Card, Col, Grid, Row, StatCard } from '../../components/ui';
 import { ROLES } from '../../lib/roles';
 
 export default function AdminDashboard() {
-  const { state, teamFor, goalsFor, computeRatingFor, eligibilityFor } = useApp();
+  const { state, setPage } = useApp();
   const { C } = useTheme();
 
-  const managers = state.users.filter((u) => u.role === ROLES.MANAGER);
-  const employees = state.users.filter((u) => u.role === ROLES.EMPLOYEE);
   const pendingAdminApprovals = state.approvals.filter((a) => a.status === 'PENDING' && a.adminOnly).length;
-  const pendingPromotions = state.promotions.filter((p) => p.status === 'RECOMMENDED').length;
+  const activeGoals = Object.values(state.empGoals).flat().length;
+  const activePeriod = state.periods.find((p) => p.isActive);
 
-  const orgAvg = employees.length
-    ? employees.reduce((s, e) => s + computeRatingFor(e.id).adjusted, 0) / employees.length
-    : 0;
-
-  const teamChart = managers.map((m) => {
-    const team = teamFor(m.id);
-    const avg = team.length ? team.reduce((s, e) => s + computeRatingFor(e.id).adjusted, 0) / team.length : 0;
-    return { team: m.group || m.name.split(' ')[0], rating: Number(avg.toFixed(1)), health: teamHealth(team.flatMap((x) => goalsFor(x.id))) };
-  });
+  const roleCounts = [ROLES.ADMIN, ROLES.DIRECTOR, ROLES.MANAGER, ROLES.EMPLOYEE].map((role) => ({
+    role,
+    count: state.users.filter((u) => u.role === role).length,
+  }));
 
   return (
     <>
-      <PageHeader title="Organisation Dashboard" subtitle="Cross-team health, pending decisions and promotion pipeline." />
+      <PageHeader
+        title="Organisation Dashboard"
+        subtitle="Administrative view — org configuration, not performance data. Performance lives on the Director's surface."
+      />
 
-      <Grid columns={5} minWidth={180} style={{ marginBottom: 20 }}>
-        <StatCard icon={Users}  label="Total users"          value={state.users.length} color={C.accent} />
-        <StatCard icon={Target} label="Active goals"         value={Object.values(state.empGoals).flat().length} color={C.cyan} />
-        <StatCard icon={Award}  label="Org avg rating"       value={orgAvg.toFixed(1)} color={C.purple} />
-        <StatCard icon={Shield} label="Admin approvals"      value={pendingAdminApprovals} color={pendingAdminApprovals ? C.warning : C.success} />
-        <StatCard icon={Heart}  label="Pending promotions"   value={pendingPromotions} color={pendingPromotions ? C.warning : C.success} />
+      <Grid minWidth={200} style={{ marginBottom: 20 }}>
+        <Card onClick={() => setPage('users')}>
+          <StatCard icon={Users}    label="Total users"         value={state.users.length}   color={C.accent} />
+        </Card>
+        <Card onClick={() => setPage('catalog')}>
+          <StatCard icon={Target}   label="Goal catalog entries" value={state.goalsCatalog.length} color={C.cyan} />
+        </Card>
+        <Card onClick={() => setPage('periods')}>
+          <StatCard icon={Calendar} label="Active period"        value={activePeriod?.name || '—'} color={C.purple} />
+        </Card>
+        <Card onClick={() => setPage('groups')}>
+          <StatCard icon={Layers}   label="Role groups"          value={state.groups.length}  color={C.warning} />
+        </Card>
+        <Card onClick={() => setPage('approvals')}>
+          <StatCard icon={Shield}   label="Admin approvals"      value={pendingAdminApprovals} color={pendingAdminApprovals ? C.warning : C.success} />
+        </Card>
       </Grid>
 
-      <Card hoverable={false} style={{ marginBottom: 20 }}>
-        <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Team performance</h3>
-        <div style={{ height: 280 }}>
-          <ResponsiveContainer>
-            <BarChart data={teamChart}>
-              <CartesianGrid stroke={C.border} strokeDasharray="3 3" />
-              <XAxis dataKey="team" tick={{ fill: C.textMuted, fontSize: 12 }} />
-              <YAxis domain={[0, 100]} tick={{ fill: C.textMuted, fontSize: 12 }} />
-              <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }} />
-              <Bar dataKey="rating">
-                {teamChart.map((d, i) => <Cell key={i} fill={healthColor(d.health, C)} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
       <Card hoverable={false}>
-        <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Promotion pipeline</h3>
-        <Col gap={10}>
-          {employees.map((e) => {
-            const elig = eligibilityFor(e.id);
-            const r = computeRatingFor(e.id);
-            if (elig.tier === PROMOTION.NOT_ELIGIBLE) return null;
-            const color = elig.tier === PROMOTION.ELIGIBLE ? C.success : C.warning;
+        <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>User distribution</h3>
+        <Col gap={8}>
+          {roleCounts.map((r) => {
+            const max = Math.max(...roleCounts.map((x) => x.count));
+            const widthPct = max ? (r.count / max) * 100 : 0;
             return (
-              <Row key={e.id} style={{ justifyContent: 'space-between', padding: 10, background: C.surface, borderRadius: 10 }}>
-                <Col gap={2}>
-                  <div style={{ color: C.text, fontWeight: 600 }}>{e.name}</div>
-                  <div style={{ color: C.textMuted, fontSize: 12 }}>{e.title} · rating {r.adjusted.toFixed(1)}</div>
-                </Col>
-                <Badge color={color} bg={color + '22'}>{elig.tier.replace('_', ' ')}</Badge>
+              <Row key={r.role} gap={12} style={{ fontSize: 13 }}>
+                <div style={{ minWidth: 100, color: C.textMuted }}>{r.role}</div>
+                <div style={{ flex: 1, height: 8, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${widthPct}%`, background: C.accent }} />
+                </div>
+                <div style={{ minWidth: 32, color: C.text, fontWeight: 700, textAlign: 'right' }}>{r.count}</div>
               </Row>
             );
           })}
         </Col>
+        <div style={{ marginTop: 14, fontSize: 12, color: C.textMuted }}>
+          Only {activeGoals} goal assignments across the org this period.
+        </div>
       </Card>
     </>
   );

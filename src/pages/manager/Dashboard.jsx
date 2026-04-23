@@ -10,7 +10,9 @@ export default function ManagerDashboard() {
   const { user, teamFor, goalsFor, computeRatingFor, eligibilityFor, state, setPage } = useApp();
   const { C } = useTheme();
   const team = teamFor(user.id);
-  const pendingApprovals = state.approvals.filter((a) => a.managerId === user.id && a.status === 'PENDING').length;
+  const pendingApprovals = state.approvals.filter(
+    (a) => a.managerId === user.id && a.status === 'PENDING' && !a.adminOnly
+  ).length;
   const avgRating = team.length
     ? team.reduce((s, m) => s + computeRatingFor(m.id).adjusted, 0) / team.length
     : 0;

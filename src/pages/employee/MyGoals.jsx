@@ -68,6 +68,10 @@ export default function MyGoals() {
 
               <Row gap={12} style={{ marginBottom: 8 }}>
                 <div style={{ flex: 1 }}><ProgressBar value={g.completion} color={statusColor(g.status, C)} /></div>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, color: C.purple, background: C.purpleDim,
+                  padding: '4px 9px', borderRadius: 999, minWidth: 68, textAlign: 'center',
+                }}>Weight {g.weight}%</div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.text, minWidth: 52, textAlign: 'right' }}>{g.completion}%</div>
               </Row>
 
