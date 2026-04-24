@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
@@ -13,6 +13,7 @@ export default function MyTeam() {
   const team = teamFor(user.id);
   const [assignOpen, setAssignOpen] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [promoteOpen, setPromoteOpen] = useState(false);
   const isDirector = user.role === ROLES.DIRECTOR;
 
   // For each member, if they themselves have reports, the avg adjusted rating of their reports.
@@ -43,9 +44,14 @@ export default function MyTeam() {
           ? 'Each manager and the rolled-up rating of the team they lead — you are accountable for both.'
           : 'Deduplicated goal × member heatmap. Numbers show completion %.'}
         actions={
-          <Button icon={Plus} onClick={() => setAddOpen(true)}>
-            {isDirector ? 'Add manager' : 'Add member'}
-          </Button>
+          <Row gap={8}>
+            {isDirector && (
+              <Button variant="outline" icon={ArrowUp} onClick={() => setPromoteOpen(true)}>Promote IC to manager</Button>
+            )}
+            <Button icon={Plus} onClick={() => setAddOpen(true)}>
+              {isDirector ? 'Add manager' : 'Add member'}
+            </Button>
+          </Row>
         }
       />
 
@@ -150,6 +156,16 @@ export default function MyTeam() {
         groups={state.groups}
         actions={actions}
       />
+      {isDirector && (
+        <PromoteICModal
+          open={promoteOpen}
+          onClose={() => setPromoteOpen(false)}
+          directorId={user.id}
+          state={state}
+          actions={actions}
+          requestedBy={user.role}
+        />
+      )}
     </>
   );
 }
@@ -178,6 +194,52 @@ function AddMemberModal({ open, onClose, managerId, requestedBy, targetRole, gro
               name, email, title, role: targetRole, managerId,
               group, dept: 'Engineering', avatar: '#5b8def',
             }, requestedBy);
+            onClose();
+          }}
+        >Submit for admin approval</Button>
+      </Row>
+    </Modal>
+  );
+}
+
+function PromoteICModal({ open, onClose, directorId, state, actions, requestedBy }) {
+  // Everyone transitively under the director — i.e. reports of the director's managers.
+  const managers = state.users.filter((u) => u.managerId === directorId);
+  const ics = state.users.filter((u) =>
+    u.role === ROLES.EMPLOYEE && managers.some((m) => m.id === u.managerId)
+  );
+  const [employeeId, setEmployeeId] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+
+  return (
+    <Modal open={open} onClose={onClose} title="Promote IC to manager">
+      <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+        This becomes a role change (IC → Manager) under your direct line.
+        Admin approval is required; on approve the selected person will start
+        receiving manager-tier goals.
+      </p>
+      <Select
+        label="Employee"
+        value={employeeId}
+        onChange={(v) => {
+          setEmployeeId(v);
+          const u = ics.find((x) => x.id === v);
+          if (u && !newTitle) {
+            // Reasonable default next step from their group ladder.
+            const base = (u.group || '').split(' ').slice(0, 1).join(' ');
+            setNewTitle(`${base || 'Team'} Manager`.trim());
+          }
+        }}
+        options={[{ value: '', label: `Select from ${ics.length} IC(s)` },
+          ...ics.map((u) => ({ value: u.id, label: `${u.name} — ${u.title}` }))]}
+      />
+      <Input label="New manager title" value={newTitle} onChange={setNewTitle} placeholder="e.g. Backend Manager" />
+      <Row style={{ justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button
+          disabled={!employeeId || !newTitle.trim()}
+          onClick={() => {
+            actions.promoteToManager(employeeId, newTitle.trim(), directorId, requestedBy);
             onClose();
           }}
         >Submit for admin approval</Button>

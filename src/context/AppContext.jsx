@@ -347,6 +347,14 @@ export function AppProvider({ children }) {
       if (appr.type === APPROVAL_TYPES.TEAM_LINK && approve && appr.payload) {
         dispatch({ type: 'UPDATE_USER', id: appr.employeeId, patch: { managerId: appr.payload.newManagerId } });
       }
+      if (appr.type === APPROVAL_TYPES.ROLE_CHANGE && approve && appr.payload) {
+        const { newRole, newTitle, newManagerId } = appr.payload;
+        dispatch({
+          type: 'UPDATE_USER',
+          id: appr.employeeId,
+          patch: { role: newRole, title: newTitle, managerId: newManagerId ?? undefined },
+        });
+      }
       if (appr.type === APPROVAL_TYPES.NEW_USER) {
         dispatch({
           type: 'UPDATE_USER',
@@ -417,6 +425,27 @@ export function AppProvider({ children }) {
     updateUser: (id, patch) => { dispatch({ type: 'UPDATE_USER', id, patch }); showToast('User updated'); },
     deactivateUser: (id) => { dispatch({ type: 'UPDATE_USER', id, patch: { status: 'INACTIVE' } }); showToast('User deactivated'); },
     reactivateUser: (id) => { dispatch({ type: 'UPDATE_USER', id, patch: { status: 'ACTIVE' } }); showToast('User reactivated'); },
+    // Director-initiated: promote an existing IC into a manager slot.
+    // Queued as an admin approval; on approve, role/title/manager pointer flip.
+    promoteToManager: (employeeId, newTitle, newManagerId, requestedBy) => {
+      const emp = state.users.find((u) => u.id === employeeId);
+      if (!emp) return;
+      dispatch({
+        type: 'ADD_APPROVAL',
+        approval: {
+          id: genId('appr'),
+          type: APPROVAL_TYPES.ROLE_CHANGE,
+          employeeId,
+          managerId: newManagerId || emp.managerId,
+          status: APPROVAL_STATUS.PENDING,
+          adminOnly: true,
+          date: new Date().toISOString().slice(0, 10),
+          detail: `${requestedBy} proposes promoting ${emp.name} from ${emp.title || emp.role} to ${newTitle} (Manager)`,
+          payload: { newRole: ROLES.MANAGER, newTitle, newManagerId: newManagerId || emp.managerId },
+        },
+      });
+      showToast('Promotion to manager submitted for admin approval', 'warning');
+    },
     addCatalogGoal: (goal) => { dispatch({ type: 'ADD_CATALOG_GOAL', goal: { ...goal, id: genId('g') } }); showToast('Goal added to catalog'); },
     addPeriod: (period) => { dispatch({ type: 'ADD_PERIOD', period: { ...period, id: genId('p') } }); showToast('Period added'); },
     updatePeriod: (id, patch) => { dispatch({ type: 'UPDATE_PERIOD', id, patch }); showToast('Period updated'); },
