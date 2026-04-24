@@ -104,7 +104,7 @@ export default function OneOnOnes() {
     <>
       <PageHeader
         title="One-on-Ones"
-        subtitle="Request, accept and log outcomes of 1:1s with your reports and your manager."
+        subtitle="Use 1:1s to discuss goals, blockers, growth and any feedback that doesn&rsquo;t belong in writing."
         actions={
           <Button icon={Plus} disabled={counterparts.length === 0} onClick={() => setRequestOpen(true)}>
             Request 1:1
@@ -113,13 +113,25 @@ export default function OneOnOnes() {
       />
 
       {counterparts.length === 0 && (
-        <Card><EmptyState icon={Clock} title="No one to meet with" subtitle="You don't have a manager or direct reports in-system yet." /></Card>
+        <Card><EmptyState icon={Clock} title="No one to meet with" subtitle="You don&rsquo;t have a manager or direct reports in-system yet — your admin can wire that up." /></Card>
       )}
 
       <Col gap={20}>
         {pendingForMe.length > 0 && <Section title="Needs your response" items={pendingForMe} empty="" />}
-        <Section title="Awaiting response" items={pendingFromMe} empty="No requests you've sent are pending." />
-        <Section title="Upcoming" items={upcoming} empty="No confirmed 1:1s on the calendar yet." />
+        <Section
+          title="Awaiting response"
+          items={pendingFromMe}
+          empty="No requests you've sent are pending."
+        />
+        <Section
+          title="Upcoming"
+          empty={(
+            <div>
+              <div style={{ marginBottom: 8 }}>No confirmed 1:1s on the calendar yet. Request one to align with your {user.role === ROLES.DIRECTOR || user.role === ROLES.MANAGER ? 'reports or your manager' : 'manager'}.</div>
+            </div>
+          )}
+          items={upcoming}
+        />
         {history.length > 0 && <Section title="History" items={history} empty="" />}
       </Col>
 
@@ -140,22 +152,50 @@ export default function OneOnOnes() {
   );
 }
 
+const SUGGESTED_TOPICS = [
+  'Rebalance goal weights',
+  'Discuss promotion readiness',
+  'Unblock a goal',
+  'Career growth conversation',
+  'Feedback on recent work',
+  'Workload check-in',
+];
+
 function RequestModal({ open, onClose, counterparts, userId, actions }) {
   const [withUserId, setWithUserId] = useState(counterparts[0]?.u.id || '');
   const [topic, setTopic] = useState('');
   const [proposedDate, setProposedDate] = useState('');
   const [note, setNote] = useState('');
   return (
-    <Modal open={open} onClose={onClose} title="Request a 1:1">
+    <Modal open={open} onClose={onClose} title="Request a 1:1" width={580}>
       <Select
         label="With"
         value={withUserId}
         onChange={setWithUserId}
         options={counterparts.map(({ u, rel }) => ({ value: u.id, label: `${u.name}${rel ? ' — ' + rel : ''}` }))}
       />
-      <Input label="Topic" value={topic} onChange={setTopic} placeholder="e.g. Rebalance goal weights" />
+
+      <div style={{ marginBottom: 4, fontSize: 12, color: '#9aa7bd' }}>Suggested topics</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+        {SUGGESTED_TOPICS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTopic(t)}
+            style={{
+              padding: '5px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+              cursor: 'pointer',
+              background: topic === t ? '#5b8def' : 'transparent',
+              color: topic === t ? '#fff' : '#9aa7bd',
+              border: `1px solid ${topic === t ? '#5b8def' : 'rgba(255,255,255,0.12)'}`,
+            }}
+          >{t}</button>
+        ))}
+      </div>
+
+      <Input label="Topic" value={topic} onChange={setTopic} placeholder="What do you want to discuss?" />
       <Input label="Proposed date" type="date" value={proposedDate} onChange={setProposedDate} />
-      <TextArea label="Context (optional)" value={note} onChange={setNote} rows={3} />
+      <TextArea label="Context (optional)" value={note} onChange={setNote} rows={3} placeholder="Anything you want them to read before the meeting." />
       <Row style={{ justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button
