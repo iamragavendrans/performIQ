@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { MessageCircle, Sparkles, Send } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Avatar, Badge, Button, Card, Col, ProgressBar, Row, Select } from '../../components/ui';
+import { Avatar, Badge, Button, Card, Col, Modal, ProgressBar, Row, Select, TextArea } from '../../components/ui';
 import { goalStatus, healthColor, statusColor, teamHealth } from '../../lib/compute';
+import { suggestManagerFeedback } from '../../lib/feedback';
+import { formatDate } from '../../lib/format';
 
 const SORTS = {
   NAME_ASC:   { label: 'Name (A→Z)',     cmp: (a, b) => a.m.name.localeCompare(b.m.name) },
@@ -13,11 +16,12 @@ const SORTS = {
 };
 
 export default function ManagerReports() {
-  const { user, teamFor, goalsFor, computeRatingFor, state, pageParams } = useApp();
+  const { user, teamFor, goalsFor, computeRatingFor, state, pageParams, actions } = useApp();
   const { C } = useTheme();
   const team = teamFor(user.id);
   const [focus, setFocus] = useState(pageParams?.focus || 'ALL');
   const [sortKey, setSortKey] = useState('RATING_DESC');
+  const [feedbackTarget, setFeedbackTarget] = useState(null);
 
   const member = focus === 'ALL' ? null : team.find((m) => m.id === focus);
 
@@ -108,8 +112,9 @@ export default function ManagerReports() {
 
       {member ? (
         <>
-          <Row style={{ marginBottom: 12 }}>
+          <Row style={{ marginBottom: 12, justifyContent: 'space-between' }}>
             <Button size="sm" variant="ghost" onClick={() => setFocus('ALL')}>&larr; Back to all members</Button>
+            <Button size="sm" icon={MessageCircle} onClick={() => setFeedbackTarget(member)}>Give feedback</Button>
           </Row>
           <MemberDetail member={member} goals={goalsFor(member.id)} rating={computeRatingFor(member.id)} C={C} state={state} />
         </>
@@ -131,13 +136,104 @@ export default function ManagerReports() {
                     <div style={{ color: C.text, fontWeight: 700, fontSize: 16 }}>{rating.toFixed(1)}</div>
                   </Col>
                   <Badge color={healthColor(health, C)} bg={healthColor(health, C) + '22'}>{health}</Badge>
+                  <Button
+                    size="sm" variant="outline" icon={MessageCircle}
+                    onClick={(e) => { e.stopPropagation(); setFeedbackTarget(m); }}
+                  >Feedback</Button>
                 </Row>
               </Row>
             </Card>
           ))}
         </Col>
       )}
+
+      <FeedbackModal
+        target={feedbackTarget}
+        onClose={() => setFeedbackTarget(null)}
+        goals={feedbackTarget ? goalsFor(feedbackTarget.id) : []}
+        recent={(state.feedback || []).filter((f) => f.toId === feedbackTarget?.id && f.fromId === user.id).slice(-3)}
+        fromId={user.id}
+        actions={actions}
+        C={C}
+      />
     </>
+  );
+}
+
+function FeedbackModal({ target, onClose, goals, recent, fromId, actions, C }) {
+  const open = !!target;
+  const [goalId, setGoalId] = useState('');
+  const [text, setText] = useState('');
+
+  if (!target) return null;
+
+  const selectedGoal = goals.find((g) => g.id === goalId);
+  const suggestion = selectedGoal
+    ? suggestManagerFeedback(selectedGoal)
+    : 'Zoom out: what&rsquo;s going well this period, and where do you want to push them next? Give one specific ask.';
+
+  const useSuggestion = () => setText(typeof suggestion === 'string' ? suggestion : '');
+
+  const send = () => {
+    actions.sendFeedback(fromId, target.id, goalId || null, text.trim());
+    setText(''); setGoalId(''); onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={`Feedback for ${target.name}`} width={620}>
+      <p style={{ fontSize: 12, color: C.textSub, marginBottom: 12 }}>
+        Actionable feedback beats generic praise. Reference a specific goal, quote the observation, and end with a clear ask.
+      </p>
+
+      <Select
+        label="About which goal?"
+        value={goalId}
+        onChange={setGoalId}
+        options={[
+          { value: '', label: 'General feedback (not tied to a goal)' },
+          ...goals.filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED')
+            .map((g) => ({ value: g.id, label: `${g.title} — ${g.completion}%` })),
+        ]}
+      />
+
+      <div style={{
+        padding: 10, background: C.surface, borderRadius: 8, marginBottom: 10,
+        border: `1px dashed ${C.border}`,
+      }}>
+        <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+          <Row gap={6} style={{ color: C.accent, fontSize: 11, fontWeight: 700 }}>
+            <Sparkles size={12} /> SUGGESTED DRAFT
+          </Row>
+          <Button size="sm" variant="ghost" onClick={useSuggestion}>Use this</Button>
+        </Row>
+        <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.55 }}>{suggestion}</div>
+      </div>
+
+      <TextArea
+        label="Your feedback"
+        value={text}
+        onChange={setText}
+        rows={5}
+        placeholder="Be specific: what you observed, why it matters, and what to do next."
+      />
+
+      {recent.length > 0 && (
+        <Col gap={6} style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 600 }}>RECENT FROM YOU</div>
+          {recent.map((r) => (
+            <div key={r.id} style={{ padding: 8, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
+              <div style={{ color: C.textSub, fontSize: 11, marginBottom: 2 }}>{formatDate(r.createdAt)}</div>
+              {r.text}
+            </div>
+          ))}
+        </Col>
+      )}
+
+      <Row style={{ justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="success" icon={Send} disabled={!text.trim()} onClick={send}>Send feedback</Button>
+      </Row>
+    </Modal>
   );
 }
 

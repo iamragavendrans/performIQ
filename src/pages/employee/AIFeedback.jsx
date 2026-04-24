@@ -18,10 +18,13 @@ const STEPS = [
 const REVEAL_AT = 1250;
 
 export default function AIFeedback() {
-  const { user, goalsFor, findUser } = useApp();
+  const { user, goalsFor, findUser, state } = useApp();
   const { C } = useTheme();
   const goals = goalsFor(user.id).filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED');
   const manager = findUser(user.managerId);
+  const receivedFeedback = (state.feedback || [])
+    .filter((f) => f.toId === user.id)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const [brewing, setBrewing] = useState(true);
   const [stepIdx, setStepIdx] = useState(0);
@@ -90,19 +93,54 @@ export default function AIFeedback() {
             <Card hoverable={false}>
               <Row gap={8} style={{ marginBottom: 12 }}>
                 <TrendingUp size={18} color={C.cyan} />
-                <h3 style={{ color: C.text, fontSize: 16 }}>Indirect manager signals</h3>
+                <h3 style={{ color: C.text, fontSize: 16 }}>
+                  {receivedFeedback.length > 0 ? 'From your manager' : 'Indirect manager signals'}
+                </h3>
               </Row>
-              <Col gap={12}>
-                <div style={{ padding: 12, background: C.surface, borderRadius: 10, fontSize: 13, color: C.textMuted }}>
-                  <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>{manager ? manager.name : 'Your manager'}</div>
-                  Weight distribution reflects {manager?.name?.split(' ')[0] || 'your manager'}&rsquo;s priorities. The highest-weight goals signal what they consider most important this period.
-                </div>
-                {goals.filter((g) => g.weight >= 20).map((g) => (
-                  <Row key={g.id} gap={8} style={{ fontSize: 12, color: C.textMuted }}>
-                    <Target size={12} color={C.accent} /> High priority · <span style={{ color: C.text, fontWeight: 600 }}>{g.title}</span>
-                  </Row>
-                ))}
-              </Col>
+              {receivedFeedback.length > 0 ? (
+                <Col gap={10}>
+                  {receivedFeedback.slice(0, 4).map((f) => {
+                    const from = findUser(f.fromId);
+                    const goal = goals.find((g) => g.id === f.goalId);
+                    return (
+                      <div key={f.id} style={{
+                        padding: 12, background: C.surface, borderRadius: 10,
+                        borderLeft: `3px solid ${C.cyan}`,
+                      }}>
+                        <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>
+                            {from?.name || 'Your manager'}
+                          </div>
+                          <div style={{ color: C.textSub, fontSize: 11 }}>{new Date(f.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+                        </Row>
+                        {goal && (
+                          <div style={{ color: C.accent, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                            On: {goal.title}
+                          </div>
+                        )}
+                        <div style={{ color: C.text, fontSize: 13, lineHeight: 1.55 }}>{f.text}</div>
+                      </div>
+                    );
+                  })}
+                  {receivedFeedback.length > 4 && (
+                    <div style={{ color: C.textSub, fontSize: 11, textAlign: 'center' }}>
+                      +{receivedFeedback.length - 4} older items
+                    </div>
+                  )}
+                </Col>
+              ) : (
+                <Col gap={12}>
+                  <div style={{ padding: 12, background: C.surface, borderRadius: 10, fontSize: 13, color: C.textMuted }}>
+                    <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>{manager ? manager.name : 'Your manager'}</div>
+                    Weight distribution reflects {manager?.name?.split(' ')[0] || 'your manager'}&rsquo;s priorities. The highest-weight goals signal what they consider most important this period.
+                  </div>
+                  {goals.filter((g) => g.weight >= 20).map((g) => (
+                    <Row key={g.id} gap={8} style={{ fontSize: 12, color: C.textMuted }}>
+                      <Target size={12} color={C.accent} /> High priority · <span style={{ color: C.text, fontWeight: 600 }}>{g.title}</span>
+                    </Row>
+                  ))}
+                </Col>
+              )}
             </Card>
           </Grid>
 

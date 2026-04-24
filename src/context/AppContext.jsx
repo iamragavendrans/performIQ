@@ -132,6 +132,9 @@ const reducer = (state, action) => {
         oneOnOnes: (state.oneOnOnes || []).map((o) => (o.id === action.id ? { ...o, ...action.patch } : o)),
       };
 
+    case 'ADD_FEEDBACK':
+      return { ...state, feedback: [...(state.feedback || []), action.feedback] };
+
     case 'RESET':
       return buildInitialState();
 
@@ -461,6 +464,21 @@ export function AppProvider({ children }) {
     cancelOneOnOne: (id) => {
       dispatch({ type: 'UPDATE_ONE_ON_ONE', id, patch: { status: 'CANCELLED' } });
       showToast('1:1 cancelled');
+    },
+
+    // Manager → Employee written feedback. One-way, appended; goalId is optional
+    // (null for general feedback unrelated to a specific goal).
+    sendFeedback: (fromId, toId, goalId, text) => {
+      dispatch({
+        type: 'ADD_FEEDBACK',
+        feedback: {
+          id: genId('fb'),
+          fromId, toId, goalId: goalId || null,
+          text,
+          createdAt: new Date().toISOString().slice(0, 10),
+        },
+      });
+      showToast('Feedback sent');
     },
     // Director-initiated: promote an existing IC into a manager slot.
     // Queued as an admin approval; on approve, role/title/manager pointer flip.

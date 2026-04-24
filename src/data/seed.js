@@ -288,6 +288,19 @@ const buildProgression = () => {
 export const INITIAL_PROGRESSION = buildProgression();
 
 // ------------ 1:1 seeds -----------------------------------------------------
+// ------------ Manager-written feedback --------------------------------------
+export const INITIAL_FEEDBACK = [
+  { id: genId('fb'), fromId: 'u_mgr_qa', toId: 'u_qa_2', goalId: null,
+    text: 'Strong quarter — your automation harness raised the whole team\'s coverage. Keep investing in documentation so others can replicate the approach.',
+    createdAt: daysAgo(10) },
+  { id: genId('fb'), fromId: 'u_mgr_qa', toId: 'u_qa_3', goalId: 'g_test_coverage',
+    text: 'Post-return, the coverage work is ramping slower than we\'d planned. Let\'s pick one high-risk module this week and move it above 70% together. Ping me for pairing time.',
+    createdAt: daysAgo(3) },
+  { id: genId('fb'), fromId: 'u_mgr_be', toId: 'u_be_1', goalId: 'g_api_latency',
+    text: 'The payment gateway refactor changed the ceiling of what we can ship. Share the approach in next week\'s eng forum — this is promotable work.',
+    createdAt: daysAgo(6) },
+];
+
 export const INITIAL_ONE_ON_ONES = [
   { id: genId('oo'), initiatorId: 'u_qa_1', withUserId: 'u_mgr_qa', topic: 'Goal weight rebalance', proposedDate: daysAhead(3), status: 'PENDING', note: 'Want to discuss shifting Automation weight down.', createdAt: daysAgo(1) },
   { id: genId('oo'), initiatorId: 'u_mgr_be', withUserId: 'u_be_3', topic: 'On-track check-in', proposedDate: daysAhead(5), status: 'ACCEPTED', note: 'Regular bi-weekly.', createdAt: daysAgo(2) },
@@ -310,5 +323,6 @@ export const buildInitialState = () => ({
   ladders: INITIAL_LADDERS,
   progression: INITIAL_PROGRESSION,
   oneOnOnes: INITIAL_ONE_ON_ONES,
+  feedback: INITIAL_FEEDBACK,
   meta: { seededAt: today() },
 });
