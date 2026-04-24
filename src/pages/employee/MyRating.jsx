@@ -1,10 +1,13 @@
-import { Award, Heart, TrendingUp } from 'lucide-react';
+import { Award, Heart, TrendingUp, TrendingDown, Minus, Star } from 'lucide-react';
+import { useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { useCountUp } from '../../hooks/useCountUp';
 import { PageHeader } from '../../components/layout/Shell';
 import { Badge, Card, Col, Grid, InfoTooltip, ProgressBar, Row } from '../../components/ui';
-import { PROMOTION, statusColor, goalStatus, lifeEventImpact, lifeEventScore } from '../../lib/compute';
+import { PROMOTION, lifeEventImpact, lifeEventScore } from '../../lib/compute';
+import { promotionHowToImprove } from '../../lib/insights';
+import { buildGoalColorMap } from '../../lib/colors';
 import { formatDate } from '../../lib/format';
 
 export default function MyRating() {
@@ -13,10 +16,30 @@ export default function MyRating() {
   const goals = goalsFor(user.id).filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED');
   const r = computeRatingFor(user.id);
   const eligibility = eligibilityFor(user.id);
-  const history = state.ratingHistory[user.id] || [];
+  const historyRaw = state.ratingHistory[user.id];
   const approvedLE = (state.lifeEvents[user.id] || []).filter((e) => e.status === 'APPROVED');
 
+  const colorMap = useMemo(() => buildGoalColorMap(goals), [goals]);
+
+  // Goals enriched with their rating contribution (completion% × weight%) and
+  // sorted high → low, so the top contributor is always at the head of the list.
+  const contributions = useMemo(() => {
+    return goals
+      .map((g) => ({ g, contribution: ((g.completion || 0) * (g.weight || 0)) / 100 }))
+      .sort((a, b) => b.contribution - a.contribution);
+  }, [goals]);
+  const topContributor = contributions[0];
+
+  // History sorted desc and indexed for trend arrows (each row shows delta vs prev period).
+  const historyDesc = useMemo(
+    () => [...(historyRaw || [])].sort((a, b) => new Date(b.endDate) - new Date(a.endDate)),
+    [historyRaw]
+  );
+
   const eligibilityColor = eligibility.tier === PROMOTION.ELIGIBLE ? C.success : eligibility.tier === PROMOTION.APPROACHING ? C.warning : C.textMuted;
+  const howTo = promotionHowToImprove(eligibility);
+  const lastPeriod = historyDesc[0];
+  const trendVsLast = lastPeriod ? r.adjusted - lastPeriod.adjusted : null;
 
   const myPromotion = state.promotions.find((p) => p.employeeId === user.id && (p.status === 'RECOMMENDED' || p.status === 'APPROVED'));
 
@@ -58,18 +81,44 @@ export default function MyRating() {
         <Card hoverable={false}>
           <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>How each goal contributes</h3>
           {goals.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>No goals yet.</div>}
+          {topContributor && (
+            <div style={{
+              padding: 12, marginBottom: 14, borderRadius: 10,
+              background: (colorMap[topContributor.g.id] || C.accent) + '14',
+              border: `1px solid ${(colorMap[topContributor.g.id] || C.accent) + '55'}`,
+            }}>
+              <Row gap={10} style={{ alignItems: 'center' }}>
+                <Star size={16} color={colorMap[topContributor.g.id] || C.accent} />
+                <Col gap={2} style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: C.textSub, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
+                    LARGEST IMPACT
+                  </div>
+                  <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>
+                    {topContributor.g.title}
+                  </div>
+                  <div style={{ color: C.textMuted, fontSize: 12 }}>
+                    Contributes <b style={{ color: colorMap[topContributor.g.id] || C.accent }}>{topContributor.contribution.toFixed(1)}</b> points to your raw rating today
+                    ({topContributor.g.completion}% × {topContributor.g.weight}%).
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          )}
           <Col gap={12}>
-            {goals.map((g) => {
-              const contribution = (g.completion * g.weight) / 100;
+            {contributions.map(({ g, contribution }) => {
+              const color = colorMap[g.id] || C.accent;
               return (
                 <div key={g.id}>
                   <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
-                    <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{g.title}</div>
+                    <Row gap={8}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: color, marginTop: 4, flexShrink: 0 }} />
+                      <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{g.title}</div>
+                    </Row>
                     <div style={{ fontSize: 12, color: C.textMuted }}>
-                      {g.completion}% × {g.weight}% = <b style={{ color: statusColor(goalStatus(g.completion), C) }}>{contribution.toFixed(1)}</b>
+                      {g.completion}% × {g.weight}% = <b style={{ color }}>{contribution.toFixed(1)}</b>
                     </div>
                   </Row>
-                  <ProgressBar value={g.completion} color={statusColor(goalStatus(g.completion), C)} />
+                  <ProgressBar value={g.completion} color={color} />
                 </div>
               );
             })}
@@ -107,28 +156,35 @@ export default function MyRating() {
 
         <Card hoverable={false}>
           <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Rating history</h3>
-          <Col gap={8}>
-            <Row style={{ justifyContent: 'space-between', fontSize: 13, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ color: C.text }}>{state.periods.find((p) => p.isActive)?.name} (current)</div>
-              <Row gap={12}>
-                <div style={{ color: C.textMuted }}>Raw {r.raw.toFixed(1)}</div>
+          <Col gap={10}>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'center', fontSize: 13, paddingBottom: 10, borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ color: C.text }}>
+                {state.periods.find((p) => p.isActive)?.name} <span style={{ color: C.textSub, fontSize: 11 }}>(current)</span>
+              </div>
+              <Row gap={12} style={{ alignItems: 'center' }}>
+                <div style={{ color: C.textMuted, fontSize: 12 }}>Raw {r.raw.toFixed(1)}</div>
                 <div style={{ color: C.cyan, fontWeight: 700 }}>Adjusted {r.adjusted.toFixed(1)}</div>
+                {trendVsLast !== null && <TrendChip delta={trendVsLast} C={C} />}
               </Row>
             </Row>
-            {[...history]
-              .sort((a, b) => new Date(b.endDate) - new Date(a.endDate))
-              .map((h) => {
-                const period = state.periods.find((p) => p.id === h.periodId);
-                return (
-                  <Row key={h.periodId} style={{ justifyContent: 'space-between', fontSize: 13 }}>
-                    <div style={{ color: C.text }}>{period?.name || h.periodId}</div>
-                    <Row gap={12}>
-                      <div style={{ color: C.textMuted }}>Raw {h.raw.toFixed(1)}</div>
-                      <div style={{ color: C.cyan, fontWeight: 600 }}>Adjusted {h.adjusted.toFixed(1)}</div>
-                    </Row>
+            {historyDesc.map((h, i) => {
+              const period = state.periods.find((p) => p.id === h.periodId);
+              const prev = historyDesc[i + 1];
+              const delta = prev ? h.adjusted - prev.adjusted : null;
+              return (
+                <Row key={h.periodId} style={{ justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                  <div style={{ color: C.text }}>{period?.name || h.periodId}</div>
+                  <Row gap={12} style={{ alignItems: 'center' }}>
+                    <div style={{ color: C.textMuted, fontSize: 12 }}>Raw {h.raw.toFixed(1)}</div>
+                    <div style={{ color: C.cyan, fontWeight: 600 }}>Adjusted {h.adjusted.toFixed(1)}</div>
+                    {delta !== null && <TrendChip delta={delta} C={C} />}
                   </Row>
-                );
-              })}
+                </Row>
+              );
+            })}
+            {historyDesc.length === 0 && (
+              <div style={{ color: C.textSub, fontSize: 12 }}>No closed periods yet — once a period closes you&rsquo;ll see your trend here.</div>
+            )}
           </Col>
         </Card>
 
@@ -149,12 +205,23 @@ export default function MyRating() {
                 transition: 'width 600ms ease',
               }} />
             </div>
-            <div style={{ fontSize: 11, color: C.textSub, marginTop: 4 }}>
-              A single composite signal — the underlying parameters are intentionally not itemised, to keep focus on doing the work, not optimising the metric.
-            </div>
           </Col>
+          {howTo.length > 0 ? (
+            <div style={{ marginTop: 14, padding: 12, background: C.surface, borderRadius: 10 }}>
+              <div style={{ color: C.text, fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                {eligibility.tier === PROMOTION.ELIGIBLE ? 'To stay ready' : 'To reach &ldquo;Ready&rdquo;'}
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: C.textMuted, fontSize: 12, lineHeight: 1.6 }}>
+                {howTo.map((t, i) => <li key={i}>{t}</li>)}
+              </ul>
+            </div>
+          ) : (
+            <div style={{ marginTop: 14, padding: 12, background: C.successDim, borderRadius: 10, color: C.text, fontSize: 12 }}>
+              You&rsquo;re hitting every readiness signal. Hold the line.
+            </div>
+          )}
           {myPromotion && (
-            <div style={{ marginTop: 14, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
+            <div style={{ marginTop: 10, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
               Your manager has recommended you for promotion on {formatDate(myPromotion.date)}.
               {myPromotion.targetTitle && <> Target role: <b style={{ color: C.accent }}>{myPromotion.targetTitle}</b>.</>}
               {' '}Status: <b style={{ color: myPromotion.status === 'APPROVED' ? C.success : C.warning }}>{myPromotion.status}</b>
@@ -163,6 +230,24 @@ export default function MyRating() {
         </Card>
       </Grid>
     </>
+  );
+}
+
+function TrendChip({ delta, C }) {
+  if (delta === null || delta === undefined) return null;
+  const dir = delta > 0.05 ? 'up' : delta < -0.05 ? 'down' : 'flat';
+  const color = dir === 'up' ? C.success : dir === 'down' ? C.danger : C.textSub;
+  const Icon = dir === 'up' ? TrendingUp : dir === 'down' ? TrendingDown : Minus;
+  const label = dir === 'flat' ? 'flat' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '2px 8px', borderRadius: 999,
+      background: color + '22', color, fontSize: 11, fontWeight: 700,
+    }}>
+      <Icon size={11} />
+      {label}
+    </span>
   );
 }
 
