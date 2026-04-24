@@ -1,27 +1,38 @@
-import { useEffect, useState } from 'react';
-import { Brain, TrendingUp, Target, AlertCircle, RefreshCw, Check } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Brain, TrendingUp, TrendingDown, Target, AlertCircle, RefreshCw, Check,
+  Compass, Star, Activity, ArrowRight, Minus,
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Badge, Button, Card, Col, Grid, ProgressBar, Row } from '../../components/ui';
-import { GOAL_STATUS, statusBg, statusColor } from '../../lib/compute';
-import { suggestAction } from '../../lib/feedback';
+import { Card, Col, Grid, Row, Button } from '../../components/ui';
+import { GOAL_STATUS } from '../../lib/compute';
+import { buildGoalColorMap } from '../../lib/colors';
+import {
+  bandTone, computeAlignment, computeForecast, computeMomentum, computeRisks,
+  nextBestActions,
+} from '../../lib/insights';
+import { daysLeft } from '../../lib/format';
 
-// Each "step" is the text shown while the analyser pretends to work. Timing is
-// spaced so the last step finishes just before we reveal the real cards.
 const STEPS = [
-  { label: 'Reading your goal updates log…',             at: 0 },
-  { label: 'Weighing each goal by priority…',            at: 320 },
-  { label: 'Merging indirect signals from your manager…', at: 640 },
-  { label: 'Compiling focus areas and risks…',           at: 960 },
+  { label: 'Reading your goal updates log…',              at: 0 },
+  { label: 'Weighting goals by leverage and remaining %…', at: 320 },
+  { label: 'Cross-checking your manager&rsquo;s priorities…',  at: 640 },
+  { label: 'Forecasting trajectory and ranking moves…',    at: 960 },
 ];
 const REVEAL_AT = 1250;
 
 export default function AIFeedback() {
-  const { user, goalsFor, findUser, state } = useApp();
+  const { user, goalsFor, findUser, state, setPage } = useApp();
   const { C } = useTheme();
-  const goals = goalsFor(user.id).filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED');
+  const goals = useMemo(
+    () => goalsFor(user.id).filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED'),
+    [goalsFor, user.id]
+  );
+  const colorMap = useMemo(() => buildGoalColorMap(goals), [goals]);
   const manager = findUser(user.managerId);
+  const managerGoals = user.managerId ? goalsFor(user.managerId) : [];
   const receivedFeedback = (state.feedback || [])
     .filter((f) => f.toId === user.id)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -32,22 +43,46 @@ export default function AIFeedback() {
 
   useEffect(() => {
     setBrewing(true); setStepIdx(0);
-    const timers = STEPS.map((s, i) =>
-      setTimeout(() => setStepIdx(i + 1), s.at + 220)
-    );
+    const timers = STEPS.map((s, i) => setTimeout(() => setStepIdx(i + 1), s.at + 220));
     const reveal = setTimeout(() => setBrewing(false), REVEAL_AT);
     return () => { timers.forEach(clearTimeout); clearTimeout(reveal); };
   }, [runKey, user.id]);
 
-  const focus = [...goals].sort((a, b) => (b.weight * (100 - b.completion)) - (a.weight * (100 - a.completion))).slice(0, 3);
-  const strengths = goals.filter((g) => g.status === GOAL_STATUS.COMPLETED || g.completion >= 85);
-  const risks = goals.filter((g) => g.status === GOAL_STATUS.OFF_TRACK || g.overdue);
+  // Derived insights ---------------------------------------------------------
+  const actions   = nextBestActions(goals, 3);
+  const alignment = computeAlignment(goals, managerGoals);
+  const forecast  = computeForecast(goals);
+  const momentum  = computeMomentum(goals);
+  const risks     = computeRisks(goals);
+
+  // Strengths: completed or ≥85% — show the *contribution* (impact) not just %.
+  const strengths = goals
+    .filter((g) => g.status === GOAL_STATUS.COMPLETED || g.completion >= 85)
+    .map((g) => ({ g, contribution: ((g.completion || 0) * (g.weight || 0)) / 100 }))
+    .sort((a, b) => b.contribution - a.contribution);
+
+  // Focus shift: highest weight + low remaining (mostly already done) is a
+  // candidate for trimming — that weight could move to a more impactful goal.
+  const candidate = goals
+    .filter((g) => g.weight >= 20 && g.completion >= 80)
+    .sort((a, b) => b.weight - a.weight)[0];
+  const targetForShift = goals
+    .filter((g) => g.completion < 70 && g !== candidate)
+    .sort((a, b) => (b.weight * (100 - b.completion)) - (a.weight * (100 - a.completion)))[0];
+
+  // Trajectory phrase: compare current adjusted vs forecast.
+  const trajPhrase =
+    forecast.adjusted - 0.5 > forecast.adjusted ? '' : // unreachable, just to silence lint
+    forecast.adjusted > 85 ? 'Ahead of expected pace — projecting Exceeds Expectations.'
+    : forecast.adjusted >= 75 ? 'On expected pace for Meets Expectations.'
+    : forecast.adjusted >= 60 ? 'Behind expected pace. A focused push will close the gap.'
+    : 'Significantly off pace — pick one goal and rebuild momentum this week.';
 
   return (
     <>
       <PageHeader
         title="AI Feedback"
-        subtitle="Focus areas, blended with indirect feedback from your manager's guidance."
+        subtitle="Predictive insights derived live from your goals, updates and your manager&rsquo;s priorities."
         actions={
           <Button icon={RefreshCw} variant="outline" disabled={brewing} onClick={() => setRunKey((k) => k + 1)}>
             Re-run analysis
@@ -57,120 +92,270 @@ export default function AIFeedback() {
 
       {brewing ? <BrewingPanel C={C} stepIdx={stepIdx} /> : (
         <div style={{ animation: 'fadeIn 260ms ease' }}>
+          {/* Trajectory summary banner */}
+          <Card hoverable={false} style={{ marginBottom: 20, borderLeft: `4px solid ${bandTone(forecast.band, C)}` }}>
+            <Row gap={14} style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ background: bandTone(forecast.band, C) + '22', padding: 10, borderRadius: 10 }}>
+                <Activity size={20} color={bandTone(forecast.band, C)} />
+              </div>
+              <Col gap={2} style={{ flex: 1, minWidth: 240 }}>
+                <div style={{ color: C.textSub, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
+                  TRAJECTORY SUMMARY
+                </div>
+                <div style={{ color: C.text, fontSize: 15, fontWeight: 700 }}>
+                  Projected {forecast.adjusted.toFixed(1)} — {forecast.band}
+                </div>
+                <div style={{ color: C.textMuted, fontSize: 12 }}>{trajPhrase}</div>
+              </Col>
+              <MomentumPill momentum={momentum} C={C} />
+            </Row>
+          </Card>
+
+          {/* Top focus areas (with priority labels + impact) + Manager alignment */}
           <Grid minWidth={320} style={{ marginBottom: 20 }}>
             <Card hoverable={false}>
-              <Row gap={8} style={{ marginBottom: 12 }}>
+              <Row gap={8} style={{ marginBottom: 4 }}>
                 <Brain size={18} color={C.accent} />
-                <h3 style={{ color: C.text, fontSize: 16 }}>Top focus areas</h3>
+                <h3 style={{ color: C.text, fontSize: 16 }}>What will move your rating most</h3>
               </Row>
-              <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 16 }}>
-                Ranked by weight × remaining completion. Working these moves your rating the most.
+              <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 14 }}>
+                Each item below shows the rating points you&rsquo;d gain if you closed that goal at 100%.
               </p>
-              <Col gap={16}>
-                {focus.map((g) => (
-                  <div key={g.id}>
-                    <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{g.title}</div>
-                      <Badge color={statusColor(g.status, C)} bg={statusBg(g.status, C)}>Weight {g.weight}%</Badge>
-                    </Row>
-                    <ProgressBar value={g.completion} color={statusColor(g.status, C)} />
-                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
-                      {g.completion}% done · leverage score {(g.weight * (100 - g.completion)) / 100 | 0}
-                    </div>
-                    <div style={{
-                      marginTop: 8, padding: '8px 10px', background: C.surface,
-                      borderRadius: 8, borderLeft: `3px solid ${statusColor(g.status, C)}`,
-                      fontSize: 12, color: C.text, lineHeight: 1.5,
-                    }}>
-                      <span style={{ color: C.textSub, fontWeight: 600, marginRight: 6 }}>TRY THIS:</span>
-                      {suggestAction(g)}
-                    </div>
+              <Col gap={14}>
+                {actions.length === 0 && (
+                  <div style={{ color: C.textMuted, fontSize: 13 }}>
+                    Every goal is at 100% — nothing to optimise. Consider self-proposing a stretch goal.
                   </div>
-                ))}
+                )}
+                {actions.map((a, i) => {
+                  const color = colorMap[a.goal.id] || C.accent;
+                  const priority =
+                    i === 0 ? '#1 Highest impact' :
+                    i === 1 ? '#2 Secondary focus' :
+                              '#3 Worth a push';
+                  return (
+                    <div key={a.goal.id} style={{
+                      borderLeft: `3px solid ${color}`,
+                      paddingLeft: 12,
+                    }}>
+                      <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{
+                          color, fontSize: 10, fontWeight: 800, letterSpacing: 0.6,
+                        }}>{priority}</span>
+                        <span style={{ color: C.success, fontSize: 12, fontWeight: 700 }}>
+                          +{a.ratingGainIfDone.toFixed(1)} pts if closed
+                        </span>
+                      </Row>
+                      <div style={{ color: C.text, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
+                        {a.goal.title}
+                      </div>
+                      <div style={{ color: C.textMuted, fontSize: 12 }}>
+                        {a.goal.completion}% done · {a.goal.weight}% weight · {Math.max(0, daysLeft(a.goal.dueDate))} days left
+                      </div>
+                      <div style={{
+                        marginTop: 8, color: C.text, fontSize: 12, lineHeight: 1.55,
+                        background: C.surface, padding: '8px 10px', borderRadius: 8,
+                      }}>
+                        {a.recommendation.replace(/&rsquo;/g, '’')}
+                      </div>
+                    </div>
+                  );
+                })}
               </Col>
             </Card>
 
             <Card hoverable={false}>
               <Row gap={8} style={{ marginBottom: 12 }}>
-                <TrendingUp size={18} color={C.cyan} />
-                <h3 style={{ color: C.text, fontSize: 16 }}>
-                  {receivedFeedback.length > 0 ? 'From your manager' : 'Indirect manager signals'}
-                </h3>
+                <Compass size={18} color={C.cyan} />
+                <h3 style={{ color: C.text, fontSize: 16 }}>Manager alignment</h3>
               </Row>
-              {receivedFeedback.length > 0 ? (
-                <Col gap={10}>
-                  {receivedFeedback.slice(0, 4).map((f) => {
+              {alignment.score === null ? (
+                <div style={{ color: C.textMuted, fontSize: 13 }}>
+                  Your manager doesn&rsquo;t have goals on file yet — alignment will show once they do.
+                </div>
+              ) : (
+                <Col gap={12}>
+                  <div style={{
+                    padding: 12, background: C.surface, borderRadius: 10,
+                    border: `1px solid ${C.border}`,
+                  }}>
+                    <div style={{ color: C.text, fontSize: 22, fontWeight: 800 }}>
+                      {alignment.score}%
+                    </div>
+                    <div style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>
+                      You&rsquo;re focusing on <b style={{ color: C.text }}>{alignment.covered} of {alignment.total}</b> of {manager?.name?.split(' ')[0] || 'your manager'}&rsquo;s top priorities.
+                    </div>
+                  </div>
+                  {alignment.gaps.length > 0 && (
+                    <div>
+                      <div style={{ color: C.warning, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                        MISSING FOCUS
+                      </div>
+                      <Col gap={6}>
+                        {alignment.gaps.slice(0, 3).map((g, i) => (
+                          <Row key={i} gap={8} style={{ fontSize: 12, color: C.textMuted }}>
+                            <Target size={12} color={C.warning} /> {g}
+                          </Row>
+                        ))}
+                      </Col>
+                    </div>
+                  )}
+                </Col>
+              )}
+
+              {/* Manager-written feedback inbox */}
+              {receivedFeedback.length > 0 && (
+                <Col gap={10} style={{ marginTop: 18 }}>
+                  <div style={{ color: C.textSub, fontSize: 11, fontWeight: 700, letterSpacing: 0.6 }}>
+                    DIRECT FEEDBACK
+                  </div>
+                  {receivedFeedback.slice(0, 3).map((f) => {
                     const from = findUser(f.fromId);
                     const goal = goals.find((g) => g.id === f.goalId);
                     return (
                       <div key={f.id} style={{
-                        padding: 12, background: C.surface, borderRadius: 10,
+                        padding: 10, background: C.surface, borderRadius: 10,
                         borderLeft: `3px solid ${C.cyan}`,
                       }}>
-                        <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-                          <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>
-                            {from?.name || 'Your manager'}
+                        <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
+                          <div style={{ color: C.text, fontSize: 12, fontWeight: 700 }}>{from?.name}</div>
+                          <div style={{ color: C.textSub, fontSize: 11 }}>
+                            {new Date(f.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                           </div>
-                          <div style={{ color: C.textSub, fontSize: 11 }}>{new Date(f.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
                         </Row>
                         {goal && (
-                          <div style={{ color: C.accent, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
-                            On: {goal.title}
-                          </div>
+                          <div style={{ color: C.accent, fontSize: 11, marginBottom: 4 }}>On: {goal.title}</div>
                         )}
-                        <div style={{ color: C.text, fontSize: 13, lineHeight: 1.55 }}>{f.text}</div>
+                        <div style={{ color: C.text, fontSize: 12, lineHeight: 1.55 }}>{f.text}</div>
                       </div>
                     );
                   })}
-                  {receivedFeedback.length > 4 && (
-                    <div style={{ color: C.textSub, fontSize: 11, textAlign: 'center' }}>
-                      +{receivedFeedback.length - 4} older items
-                    </div>
-                  )}
-                </Col>
-              ) : (
-                <Col gap={12}>
-                  <div style={{ padding: 12, background: C.surface, borderRadius: 10, fontSize: 13, color: C.textMuted }}>
-                    <div style={{ color: C.text, fontWeight: 600, marginBottom: 4 }}>{manager ? manager.name : 'Your manager'}</div>
-                    Weight distribution reflects {manager?.name?.split(' ')[0] || 'your manager'}&rsquo;s priorities. The highest-weight goals signal what they consider most important this period.
-                  </div>
-                  {goals.filter((g) => g.weight >= 20).map((g) => (
-                    <Row key={g.id} gap={8} style={{ fontSize: 12, color: C.textMuted }}>
-                      <Target size={12} color={C.accent} /> High priority · <span style={{ color: C.text, fontWeight: 600 }}>{g.title}</span>
-                    </Row>
-                  ))}
                 </Col>
               )}
             </Card>
           </Grid>
 
-          <Grid minWidth={320}>
+          {/* Strengths (with impact) + Predictive risks */}
+          <Grid minWidth={320} style={{ marginBottom: 20 }}>
             <Card hoverable={false}>
-              <h3 style={{ color: C.success, fontSize: 15, marginBottom: 12 }}>Strengths</h3>
-              {strengths.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>Not yet — push a goal above 85% to unlock.</div>}
-              <Col gap={8}>
-                {strengths.map((g) => (
-                  <Row key={g.id} gap={8} style={{ fontSize: 13, color: C.text }}>
-                    <TrendingUp size={14} color={C.success} /> {g.title} ({g.completion}%)
-                  </Row>
-                ))}
-              </Col>
+              <Row gap={8} style={{ marginBottom: 12 }}>
+                <Star size={16} color={C.success} />
+                <h3 style={{ color: C.success, fontSize: 15 }}>Strengths</h3>
+              </Row>
+              {strengths.length === 0 ? (
+                <div style={{ color: C.textMuted, fontSize: 13 }}>
+                  Nothing yet — push a goal above 85% and it&rsquo;ll show up here with its rating impact.
+                </div>
+              ) : (
+                <Col gap={10}>
+                  {strengths.map(({ g, contribution }) => {
+                    const color = colorMap[g.id] || C.success;
+                    return (
+                      <div key={g.id} style={{
+                        padding: '10px 12px', background: C.surface, borderRadius: 8,
+                        borderLeft: `3px solid ${color}`,
+                      }}>
+                        <Row style={{ justifyContent: 'space-between', marginBottom: 2 }}>
+                          <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>{g.title}</div>
+                          <div style={{ color: C.success, fontSize: 12, fontWeight: 700 }}>
+                            +{contribution.toFixed(1)} pts
+                          </div>
+                        </Row>
+                        <div style={{ color: C.textMuted, fontSize: 11 }}>
+                          {g.completion}% complete on a {g.weight}% weight — this is a load-bearing win.
+                        </div>
+                      </div>
+                    );
+                  })}
+                </Col>
+              )}
             </Card>
+
             <Card hoverable={false}>
-              <h3 style={{ color: C.danger, fontSize: 15, marginBottom: 12 }}>Risks</h3>
-              {risks.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>Nothing off-track. Keep momentum.</div>}
-              <Col gap={8}>
-                {risks.map((g) => (
-                  <Row key={g.id} gap={8} style={{ fontSize: 13, color: C.text }}>
-                    <AlertCircle size={14} color={C.danger} /> {g.title} — {g.overdue ? 'overdue' : `${g.completion}%`}
-                  </Row>
-                ))}
-              </Col>
+              <Row gap={8} style={{ marginBottom: 12 }}>
+                <AlertCircle size={16} color={C.danger} />
+                <h3 style={{ color: C.danger, fontSize: 15 }}>Predictive risks</h3>
+              </Row>
+              {risks.length === 0 ? (
+                <div style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.5 }}>
+                  No immediate risks. Maintain your current pace to stay on track —
+                  if any goal&rsquo;s pace drops below the line needed to land, you&rsquo;ll see it here.
+                </div>
+              ) : (
+                <Col gap={10}>
+                  {risks.slice(0, 4).map((r) => {
+                    const color = colorMap[r.goal.id] || (r.severity === 'high' ? C.danger : C.warning);
+                    return (
+                      <div key={r.goal.id} style={{
+                        padding: '10px 12px', background: C.surface, borderRadius: 8,
+                        borderLeft: `3px solid ${color}`,
+                      }}>
+                        <Row style={{ justifyContent: 'space-between', marginBottom: 2 }}>
+                          <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>{r.goal.title}</div>
+                          <div style={{
+                            color: r.severity === 'high' ? C.danger : C.warning,
+                            fontSize: 11, fontWeight: 700,
+                          }}>
+                            {r.severity === 'high' ? 'HIGH RISK' : 'WATCH'}
+                          </div>
+                        </Row>
+                        <div style={{ color: C.textMuted, fontSize: 12 }}>{r.message}</div>
+                      </div>
+                    );
+                  })}
+                </Col>
+              )}
             </Card>
           </Grid>
+
+          {/* Focus shift suggestion */}
+          {candidate && targetForShift && (
+            <Card hoverable={false} style={{ borderLeft: `3px solid ${C.purple}` }}>
+              <Row gap={12} style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <div style={{ background: C.purpleDim, padding: 10, borderRadius: 10, flexShrink: 0 }}>
+                  <ArrowRight size={18} color={C.purple} />
+                </div>
+                <Col gap={6} style={{ flex: 1, minWidth: 260 }}>
+                  <div style={{ color: C.textSub, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
+                    FOCUS SHIFT SUGGESTION
+                  </div>
+                  <div style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>
+                    Trim weight on &ldquo;{candidate.title}&rdquo; ({candidate.weight}%, {candidate.completion}% done)
+                  </div>
+                  <div style={{ color: C.textMuted, fontSize: 12, lineHeight: 1.55 }}>
+                    It&rsquo;s mostly delivered. Shifting ~5% of its weight to &ldquo;{targetForShift.title}&rdquo;
+                    ({targetForShift.completion}% done, {targetForShift.weight}% weight) would give your rating
+                    a meaningful push — manager approval needed.
+                  </div>
+                </Col>
+                <Button size="sm" variant="outline" onClick={() => setPage('my-goals')}>
+                  Open My Goals
+                </Button>
+              </Row>
+            </Card>
+          )}
         </div>
       )}
     </>
+  );
+}
+
+function MomentumPill({ momentum, C }) {
+  const Icon = momentum.direction === 'up' ? TrendingUp
+             : momentum.direction === 'down' ? TrendingDown
+             : Minus;
+  const color = momentum.direction === 'up' ? C.success
+              : momentum.direction === 'down' ? C.danger
+              : C.textSub;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '6px 12px', borderRadius: 999,
+      background: color + '22', color, fontSize: 12, fontWeight: 700,
+      flexShrink: 0,
+    }}>
+      <Icon size={13} /> {momentum.phrase}
+    </span>
   );
 }
 
@@ -205,7 +390,7 @@ function BrewingPanel({ C, stepIdx }) {
                       ? <div style={{ width: 6, height: 6, borderRadius: 3, background: C.accent, animation: 'pulseSoft 0.9s ease-in-out infinite' }} />
                       : null}
                 </div>
-                <span className={active ? 'perfiq-brewing-step' : ''}>{s.label}</span>
+                <span className={active ? 'perfiq-brewing-step' : ''}>{s.label.replace(/&rsquo;/g, '’')}</span>
               </Row>
             );
           })}
