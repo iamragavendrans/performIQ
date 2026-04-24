@@ -12,6 +12,7 @@ export default function MyTeam() {
   const { C } = useTheme();
   const team = teamFor(user.id);
   const [assignOpen, setAssignOpen] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
   const isDirector = user.role === ROLES.DIRECTOR;
 
   // For each member, if they themselves have reports, the avg adjusted rating of their reports.
@@ -41,6 +42,11 @@ export default function MyTeam() {
         subtitle={isDirector
           ? 'Each manager and the rolled-up rating of the team they lead — you are accountable for both.'
           : 'Deduplicated goal × member heatmap. Numbers show completion %.'}
+        actions={
+          <Button icon={Plus} onClick={() => setAddOpen(true)}>
+            {isDirector ? 'Add manager' : 'Add member'}
+          </Button>
+        }
       />
 
       <Card hoverable={false} style={{ marginBottom: 20, overflowX: 'auto' }}>
@@ -135,7 +141,48 @@ export default function MyTeam() {
       </Col>
 
       <AssignModal open={!!assignOpen} onClose={() => setAssignOpen(null)} member={assignOpen} catalog={state.goalsCatalog} actions={actions} />
+      <AddMemberModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        managerId={user.id}
+        requestedBy={user.role}
+        targetRole={isDirector ? ROLES.MANAGER : ROLES.EMPLOYEE}
+        groups={state.groups}
+        actions={actions}
+      />
     </>
+  );
+}
+
+function AddMemberModal({ open, onClose, managerId, requestedBy, targetRole, groups, actions }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [title, setTitle] = useState('');
+  const [group, setGroup] = useState(groups[0]?.name || '');
+  const emailOk = email.includes('@');
+  return (
+    <Modal open={open} onClose={onClose} title={targetRole === ROLES.MANAGER ? 'Add manager' : 'Add team member'}>
+      <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+        This person will be added with <b>pending</b> status. Admin approval is required before the account goes live — this protects the audit trail.
+      </p>
+      <Input label="Full name" value={name} onChange={setName} />
+      <Input label="Email" type="email" value={email} onChange={setEmail} />
+      <Input label="Title" value={title} onChange={setTitle} placeholder={targetRole === ROLES.MANAGER ? 'e.g. Backend Manager' : 'e.g. Backend Dev II'} />
+      <Select label="Group / team" value={group} onChange={setGroup} options={groups.map((g) => ({ value: g.name, label: g.name }))} />
+      <Row style={{ justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button
+          disabled={!name || !emailOk || !title}
+          onClick={() => {
+            actions.addUser({
+              name, email, title, role: targetRole, managerId,
+              group, dept: 'Engineering', avatar: '#5b8def',
+            }, requestedBy);
+            onClose();
+          }}
+        >Submit for admin approval</Button>
+      </Row>
+    </Modal>
   );
 }
 
