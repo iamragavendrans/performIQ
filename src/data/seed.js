@@ -82,19 +82,34 @@ export const INITIAL_PERIODS = [
 export const ACTIVE_PERIOD_ID = 'p_h1_2026';
 
 // ------------ Goal catalog --------------------------------------------------
+// tier defaults to 'IC' (individual contributor). Manager-tier goals are
+// assignable only to managers/directors so the catalog stays meaningful.
 export const INITIAL_GOALS_CATALOG = [
-  { id: 'g_test_coverage',   title: 'Increase test coverage to 85%',             category: 'Quality',       defaultWeight: 25 },
-  { id: 'g_bug_escape',      title: 'Reduce bug escape rate below 3%',           category: 'Quality',       defaultWeight: 20 },
-  { id: 'g_automation',      title: 'Automate 50 regression test cases',         category: 'QA',            defaultWeight: 20 },
-  { id: 'g_api_latency',     title: 'Reduce P95 API latency by 30%',             category: 'Performance',   defaultWeight: 25 },
-  { id: 'g_feature_ship',    title: 'Ship 3 major features on time',             category: 'Delivery',      defaultWeight: 25 },
-  { id: 'g_tech_debt',       title: 'Close 15 tech-debt tickets',                category: 'Engineering',   defaultWeight: 15 },
-  { id: 'g_ui_accessibility',title: 'Raise accessibility score to AA on 5 flows',category: 'Frontend',      defaultWeight: 20 },
-  { id: 'g_design_system',   title: 'Contribute 10 reusable components',         category: 'Frontend',      defaultWeight: 15 },
-  { id: 'g_mentoring',       title: 'Mentor 2 junior engineers',                 category: 'Team',          defaultWeight: 10 },
-  { id: 'g_certification',   title: 'Earn 1 relevant certification',             category: 'Certification', defaultWeight: 10 },
-  { id: 'g_oncall_quality',  title: 'Zero P0 incidents on-call',                 category: 'Reliability',   defaultWeight: 15 },
-  { id: 'g_code_review',     title: 'Review 50 PRs with substantive feedback',   category: 'Team',          defaultWeight: 10 },
+  { id: 'g_test_coverage',   title: 'Increase test coverage to 85%',             category: 'Quality',       defaultWeight: 25, tier: 'IC' },
+  { id: 'g_bug_escape',      title: 'Reduce bug escape rate below 3%',           category: 'Quality',       defaultWeight: 20, tier: 'IC' },
+  { id: 'g_automation',      title: 'Automate 50 regression test cases',         category: 'QA',            defaultWeight: 20, tier: 'IC' },
+  { id: 'g_api_latency',     title: 'Reduce P95 API latency by 30%',             category: 'Performance',   defaultWeight: 25, tier: 'IC' },
+  { id: 'g_feature_ship',    title: 'Ship 3 major features on time',             category: 'Delivery',      defaultWeight: 25, tier: 'IC' },
+  { id: 'g_tech_debt',       title: 'Close 15 tech-debt tickets',                category: 'Engineering',   defaultWeight: 15, tier: 'IC' },
+  { id: 'g_ui_accessibility',title: 'Raise accessibility score to AA on 5 flows',category: 'Frontend',      defaultWeight: 20, tier: 'IC' },
+  { id: 'g_design_system',   title: 'Contribute 10 reusable components',         category: 'Frontend',      defaultWeight: 15, tier: 'IC' },
+  { id: 'g_mentoring',       title: 'Mentor 2 junior engineers',                 category: 'Team',          defaultWeight: 10, tier: 'IC' },
+  { id: 'g_certification',   title: 'Earn 1 relevant certification',             category: 'Certification', defaultWeight: 10, tier: 'IC' },
+  { id: 'g_oncall_quality',  title: 'Zero P0 incidents on-call',                 category: 'Reliability',   defaultWeight: 15, tier: 'IC' },
+  { id: 'g_code_review',     title: 'Review 50 PRs with substantive feedback',   category: 'Team',          defaultWeight: 10, tier: 'IC' },
+  // Manager-tier goals: outcomes that only make sense for people who run teams.
+  { id: 'g_team_health',     title: 'Maintain team health ≥ 75 (avg adjusted)',  category: 'Leadership',    defaultWeight: 25, tier: 'MANAGER' },
+  { id: 'g_delivery_pred',   title: 'Delivery predictability — 90% on commits',  category: 'Delivery',      defaultWeight: 20, tier: 'MANAGER' },
+  { id: 'g_attrition',       title: 'Voluntary attrition under 8% annualised',   category: 'People',        defaultWeight: 15, tier: 'MANAGER' },
+  { id: 'g_one_on_one',      title: 'Hold weekly 1:1 with every direct report',  category: 'People',        defaultWeight: 10, tier: 'MANAGER' },
+  { id: 'g_hiring',          title: 'Close 3 critical open roles',               category: 'Hiring',        defaultWeight: 15, tier: 'MANAGER' },
+  { id: 'g_growth_plan',     title: 'Every report has an active growth plan',    category: 'People',        defaultWeight: 15, tier: 'MANAGER' },
+  // Director-tier goals: cross-team outcomes, impact, and org health.
+  { id: 'g_org_outcome',     title: 'Meet quarterly engineering outcome OKRs',   category: 'Outcome',       defaultWeight: 30, tier: 'DIRECTOR' },
+  { id: 'g_cost_eff',        title: 'Keep cloud cost / feature within budget',   category: 'Efficiency',    defaultWeight: 20, tier: 'DIRECTOR' },
+  { id: 'g_mgr_bench',       title: 'Strengthen manager bench — promote 1 IC',   category: 'Leadership',    defaultWeight: 20, tier: 'DIRECTOR' },
+  { id: 'g_cross_team',      title: 'Reduce cross-team blockers by 50%',         category: 'Outcome',       defaultWeight: 15, tier: 'DIRECTOR' },
+  { id: 'g_engagement',      title: 'Org engagement score ≥ 4.2/5',              category: 'Culture',       defaultWeight: 15, tier: 'DIRECTOR' },
 ];
 
 // ------------ Groups (role → default goals) ---------------------------------
@@ -150,9 +165,17 @@ const archetypeFor = (userId) => ({
   u_director: 'star',
 }[userId] || 'steady');
 
-const buildEmpGoals = (userId, group) => {
-  const goalIds = goalSetFor(group).slice(0, 5);
-  const profile = PROFILES[archetypeFor(userId)];
+const buildEmpGoals = (user) => {
+  // Managers and directors get tier-appropriate outcome goals; ICs get group-mapped goals.
+  let goalIds;
+  if (user.role === ROLES.DIRECTOR) {
+    goalIds = INITIAL_GOALS_CATALOG.filter((g) => g.tier === 'DIRECTOR').slice(0, 5).map((g) => g.id);
+  } else if (user.role === ROLES.MANAGER) {
+    goalIds = INITIAL_GOALS_CATALOG.filter((g) => g.tier === 'MANAGER').slice(0, 5).map((g) => g.id);
+  } else {
+    goalIds = goalSetFor(user.group).slice(0, 5);
+  }
+  const profile = PROFILES[archetypeFor(user.id)];
   return goalIds.map((gId, i) => {
     const completion = profile[i % profile.length];
     const goalMeta = INITIAL_GOALS_CATALOG.find((g) => g.id === gId);
@@ -165,7 +188,7 @@ const buildEmpGoals = (userId, group) => {
 export const INITIAL_EMP_GOALS = (() => {
   const all = {};
   [...QA_TEAM, ...BE_TEAM, ...FE_TEAM, ...MANAGERS, DIRECTOR].forEach((u) => {
-    all[u.id] = buildEmpGoals(u.id, u.group);
+    all[u.id] = buildEmpGoals(u);
   });
   // A few self-proposed goals (employee initiative) — some approved, some pending.
   all.u_qa_4.push({

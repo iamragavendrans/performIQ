@@ -28,6 +28,7 @@ import AdminApprovals from './pages/admin/Approvals';
 import AdminPromotions from './pages/admin/Promotions';
 import OrgReport from './pages/admin/OrgReport';
 import OrgHierarchy from './pages/director/Hierarchy';
+import DirectorFeedback from './pages/director/Feedback';
 
 function Router() {
   const { user, page, toast, managerMode } = useApp();
@@ -54,6 +55,7 @@ function Router() {
       'my-team':    <MyTeam />,
       'goals-mgmt': <MgrGoalMgmt />,
       approvals:    <MgrApprovals />,
+      feedback:     <DirectorFeedback />,
       promotions:   <AdminPromotions />,
       reports:      <OrgReport />,
       hierarchy:    <OrgHierarchy />,

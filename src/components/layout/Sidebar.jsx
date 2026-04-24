@@ -27,6 +27,7 @@ const DIRECTOR_MENU = [
   { id: 'dashboard',  label: 'Dashboard',     icon: Home },
   { id: 'my-team',    label: 'My Managers',   icon: Users },
   { id: 'goals-mgmt', label: 'Goal Mgmt',     icon: Target },
+  { id: 'feedback',   label: 'Team Feedback', icon: TrendingUp },
   { id: 'approvals',  label: 'Approvals',     icon: CheckCircle },
   { id: 'promotions', label: 'Promotions',    icon: Award },
   { id: 'reports',    label: 'Org Report',    icon: FileText },

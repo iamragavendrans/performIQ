@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
@@ -29,7 +29,11 @@ export default function ManagerReports() {
     }))
     .sort(SORTS[sortKey].cmp);
 
-  const teamChartData = rows.map((x) => ({ name: x.m.name.split(' ')[0], rating: x.rating, health: x.health }));
+  const teamChartData = rows.map((x) => ({ id: x.m.id, name: x.m.name.split(' ')[0], fullName: x.m.name, rating: x.rating, health: x.health }));
+
+  // Clicking the bar for the already-focused member clears the filter; clicking
+  // any other member switches the focus.
+  const toggleFocus = (id) => setFocus((cur) => (cur === id ? 'ALL' : id));
 
   return (
     <>
@@ -56,22 +60,46 @@ export default function ManagerReports() {
             />
           </Row>
         </Row>
-        <div style={{ height: 280, marginTop: 16 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8 }}>
+          Tip: click any bar to drill into that member. Click again to clear.
+        </div>
+        <div style={{ height: 300, marginTop: 8 }}>
           <ResponsiveContainer>
-            <BarChart data={teamChartData}>
+            <BarChart data={teamChartData} margin={{ top: 28, right: 16, left: 0, bottom: 10 }}>
               <CartesianGrid stroke={C.border} strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fill: C.textMuted, fontSize: 12 }} />
+              <XAxis dataKey="name" tick={{ fill: C.text, fontSize: 12, fontWeight: 600 }} />
               <YAxis domain={[0, 100]} tick={{ fill: C.textMuted, fontSize: 12 }} />
               <Tooltip
                 contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontSize: 13 }}
                 labelStyle={{ color: C.text, fontWeight: 700 }}
                 itemStyle={{ color: C.text }}
                 cursor={{ fill: C.accentDim }}
+                formatter={(val, _name, ctx) => [`${val}`, ctx?.payload?.fullName || 'Rating']}
               />
-              <Bar dataKey="rating">
-                {teamChartData.map((d, i) => (
-                  <Cell key={i} fill={healthColor(d.health, C)} />
-                ))}
+              <Bar
+                dataKey="rating"
+                cursor="pointer"
+                onClick={(d) => d?.id && toggleFocus(d.id)}
+              >
+                {teamChartData.map((d, i) => {
+                  const isFocused = focus === d.id;
+                  const dim = focus !== 'ALL' && !isFocused;
+                  return (
+                    <Cell
+                      key={i}
+                      fill={healthColor(d.health, C)}
+                      fillOpacity={dim ? 0.25 : 1}
+                      stroke={isFocused ? C.text : 'none'}
+                      strokeWidth={isFocused ? 2 : 0}
+                    />
+                  );
+                })}
+                <LabelList
+                  dataKey="rating"
+                  position="top"
+                  fill={C.text}
+                  style={{ fontSize: 12, fontWeight: 700 }}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
