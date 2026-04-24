@@ -6,6 +6,34 @@ import { Avatar, Badge, Button, Card, Col, EmptyState, Row } from '../../compone
 import { PROMOTION, nextRole } from '../../lib/compute';
 import { formatDate } from '../../lib/format';
 
+function ReasonBlock({ reason, C }) {
+  if (!reason) return null;
+  const lines = reason.split('\n').map((l) => l.trim()).filter(Boolean);
+  const bullets = lines.filter((l) => l.startsWith('- '));
+  if (bullets.length >= 2) {
+    return (
+      <div style={{ marginTop: 10, padding: 10, background: C.surface, borderRadius: 8 }}>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.text, lineHeight: 1.6 }}>
+          {bullets.map((b, i) => {
+            const [label, ...rest] = b.slice(2).split(':');
+            const text = rest.join(':').trim();
+            return (
+              <li key={i}>
+                <span style={{ color: C.accent, fontWeight: 700 }}>{label}:</span> {text}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  }
+  return (
+    <div style={{ marginTop: 10, padding: 10, background: C.surface, borderRadius: 8, fontSize: 13, color: C.textMuted }}>
+      &ldquo;{reason}&rdquo;
+    </div>
+  );
+}
+
 export default function AdminPromotions() {
   const { state, findUser, computeRatingFor, eligibilityFor, actions } = useApp();
   const { C } = useTheme();
@@ -65,9 +93,7 @@ export default function AdminPromotions() {
                     </div>
                   </Col>
 
-                  <div style={{ marginTop: 10, padding: 10, background: C.surface, borderRadius: 8, fontSize: 13, color: C.textMuted }}>
-                    &ldquo;{p.reason}&rdquo;
-                  </div>
+                  <ReasonBlock reason={p.reason} C={C} />
                 </Card>
               );
             })}

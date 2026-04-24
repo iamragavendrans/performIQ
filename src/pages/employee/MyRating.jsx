@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useCountUp } from '../../hooks/useCountUp';
 import { PageHeader } from '../../components/layout/Shell';
 import { Badge, Card, Col, Grid, InfoTooltip, ProgressBar, Row } from '../../components/ui';
-import { PROMOTION, statusColor, goalStatus } from '../../lib/compute';
+import { PROMOTION, statusColor, goalStatus, lifeEventImpact, lifeEventScore } from '../../lib/compute';
 import { formatDate } from '../../lib/format';
 
 export default function MyRating() {
@@ -37,13 +37,18 @@ export default function MyRating() {
             </>
           }
         />
-        <AdjustedStat raw={r.raw} adjusted={r.adjusted} factor={r.factor} C={C} />
+        <AdjustedStat raw={r.raw} adjusted={r.adjusted} weightedDays={r.weightedDays} approvedDays={r.approvedDays} upliftPoints={r.upliftPoints} C={C} />
         <RatingStat
-          icon={TrendingUp} label="Uplift factor" value={`×${r.factor.toFixed(3)}`} color={C.success}
+          icon={TrendingUp}
+          label="Empathy uplift"
+          value={r.upliftPoints > 0.05 ? `+${r.upliftPoints.toFixed(1)} pts` : 'None'}
+          color={r.upliftPoints > 0.05 ? C.success : C.textMuted}
           tooltip={
             <>
-              <b>Uplift factor.</b> 1.000 baseline plus 0.003 per approved life-event day, capped at ×1.100.
-              {' '}Only approved events count. This makes the rating system empathy-aware without giving managers a subjective lever.
+              <b>Empathy uplift.</b> How many rating points approved life events added.
+              {' '}We convert approved days into a small, transparent bonus — 0.3 pts per weighted day
+              (days × event impact), capped so it never exceeds a 10% lift.
+              {' '}Only approved events count, and managers cannot change the math.
             </>
           }
         />
@@ -77,17 +82,24 @@ export default function MyRating() {
             ? <div style={{ color: C.textMuted, fontSize: 13 }}>No approved life events this period — no adjustment applied.</div>
             : (
               <Col gap={10}>
-                {approvedLE.map((e) => (
-                  <Row key={e.id} style={{ justifyContent: 'space-between', fontSize: 13 }}>
-                    <div>
-                      <div style={{ color: C.text, fontWeight: 600 }}>{e.type}</div>
-                      <div style={{ color: C.textMuted, fontSize: 11 }}>{formatDate(e.start)} → {formatDate(e.end)}</div>
-                    </div>
-                    <Badge color={C.cyan} bg={C.cyanDim}>Approved</Badge>
-                  </Row>
-                ))}
+                {approvedLE.map((e) => {
+                  const s = lifeEventScore(e);
+                  return (
+                    <Row key={e.id} style={{ justifyContent: 'space-between', fontSize: 13 }}>
+                      <div>
+                        <div style={{ color: C.text, fontWeight: 600 }}>{e.type}</div>
+                        <div style={{ color: C.textMuted, fontSize: 11 }}>
+                          {formatDate(e.start)} → {formatDate(e.end)} · {s.days} days × impact {lifeEventImpact(e.type).toFixed(2)} = {s.weightedDays.toFixed(1)} weighted
+                        </div>
+                      </div>
+                      <Badge color={C.cyan} bg={C.cyanDim}>+{(s.weightedDays * 0.3).toFixed(1)} pts</Badge>
+                    </Row>
+                  );
+                })}
                 <div style={{ marginTop: 6, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
-                  Uplift: {r.approvedDays} days × 0.3% = cap ×{r.factor.toFixed(3)} (max ×1.100)
+                  Plain English: {r.approvedDays} days of approved life events, weighted by severity, converted to
+                  a <b style={{ color: C.cyan }}>+{r.upliftPoints.toFixed(1)} point</b> bonus on your rating. The bonus is capped so it can never
+                  exceed 10%.
                 </div>
               </Col>
             )}
@@ -169,9 +181,9 @@ function RatingStat({ icon: Icon, label, value, color, tooltip }) {
   );
 }
 
-function AdjustedStat({ raw, adjusted, factor, C }) {
+function AdjustedStat({ raw, adjusted, weightedDays, approvedDays, upliftPoints, C }) {
   const animated = useCountUp(adjusted, { from: raw, duration: 1200, decimals: 1 });
-  const delta = adjusted - raw;
+  const delta = upliftPoints ?? (adjusted - raw);
   return (
     <Card hoverable={false} style={{ borderLeft: `3px solid ${C.cyan}` }}>
       <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -179,8 +191,9 @@ function AdjustedStat({ raw, adjusted, factor, C }) {
           <Heart size={20} color={C.cyan} />
         </div>
         <InfoTooltip>
-          <b>Adjusted rating.</b> Raw rating × uplift factor from approved life events.
-          {' '}This is what appears on your performance record. Empathy is data-driven — no manager bias.
+          <b>Adjusted rating.</b> Your raw rating plus a small empathy bonus for approved life events.
+          {' '}Different event types carry different impact (e.g. bereavement weighs more than sabbatical),
+          and the bonus is capped so it can never exceed a 10% lift. Managers can&rsquo;t change the math.
         </InfoTooltip>
       </Row>
       <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 4 }}>Adjusted rating</div>
@@ -189,10 +202,17 @@ function AdjustedStat({ raw, adjusted, factor, C }) {
         <span>Raw {raw.toFixed(1)}</span>
         <span style={{ color: C.cyan, margin: '0 6px' }}>→</span>
         <span style={{ color: C.text, fontWeight: 600 }}>{adjusted.toFixed(1)}</span>
-        {delta > 0.05 && (
-          <span style={{ color: C.success, marginLeft: 6 }}>+{delta.toFixed(1)} empathy uplift (×{factor.toFixed(3)})</span>
-        )}
       </div>
+      {delta > 0.05 ? (
+        <div style={{ marginTop: 6, fontSize: 11, color: C.success, lineHeight: 1.5 }}>
+          +{delta.toFixed(1)} points thanks to {approvedDays} day{approvedDays === 1 ? '' : 's'} of approved life events
+          {weightedDays && weightedDays !== approvedDays ? <> ({weightedDays.toFixed(1)} weighted)</> : null}.
+        </div>
+      ) : (
+        <div style={{ marginTop: 6, fontSize: 11, color: C.textSub, lineHeight: 1.5 }}>
+          No empathy uplift this period.
+        </div>
+      )}
     </Card>
   );
 }

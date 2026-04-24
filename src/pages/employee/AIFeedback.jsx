@@ -5,6 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
 import { Badge, Button, Card, Col, Grid, ProgressBar, Row } from '../../components/ui';
 import { GOAL_STATUS, statusBg, statusColor } from '../../lib/compute';
+import { suggestAction } from '../../lib/feedback';
 
 // Each "step" is the text shown while the analyser pretends to work. Timing is
 // spaced so the last step finishes just before we reveal the real cards.
@@ -62,7 +63,7 @@ export default function AIFeedback() {
               <p style={{ color: C.textMuted, fontSize: 12, marginBottom: 16 }}>
                 Ranked by weight × remaining completion. Working these moves your rating the most.
               </p>
-              <Col gap={14}>
+              <Col gap={16}>
                 {focus.map((g) => (
                   <div key={g.id}>
                     <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
@@ -72,6 +73,14 @@ export default function AIFeedback() {
                     <ProgressBar value={g.completion} color={statusColor(g.status, C)} />
                     <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
                       {g.completion}% done · leverage score {(g.weight * (100 - g.completion)) / 100 | 0}
+                    </div>
+                    <div style={{
+                      marginTop: 8, padding: '8px 10px', background: C.surface,
+                      borderRadius: 8, borderLeft: `3px solid ${statusColor(g.status, C)}`,
+                      fontSize: 12, color: C.text, lineHeight: 1.5,
+                    }}>
+                      <span style={{ color: C.textSub, fontWeight: 600, marginRight: 6 }}>TRY THIS:</span>
+                      {suggestAction(g)}
                     </div>
                   </div>
                 ))}

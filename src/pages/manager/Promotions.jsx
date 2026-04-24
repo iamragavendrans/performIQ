@@ -122,11 +122,22 @@ export default function ManagerPromotions() {
 }
 
 function RecommendModal({ open, onClose, payload, managerId, actions, C }) {
-  const [reason, setReason] = useState('');
+  const [achievements, setAchievements] = useState('');
+  const [impact, setImpact] = useState('');
+  const [growth, setGrowth] = useState('');
   if (!payload) return null;
   const { m, target, elig } = payload;
+
+  const canSubmit = achievements.trim() && impact.trim() && growth.trim() && target;
+  const buildReason = () =>
+    [
+      `- Achievements: ${achievements.trim()}`,
+      `- Impact: ${impact.trim()}`,
+      `- Growth: ${growth.trim()}`,
+    ].join('\n');
+
   return (
-    <Modal open={open} onClose={onClose} title={`Recommend ${m.name} for promotion`}>
+    <Modal open={open} onClose={onClose} title={`Recommend ${m.name} for promotion`} width={600}>
       <div style={{ padding: 12, background: C.surface, borderRadius: 10, marginBottom: 14, fontSize: 13 }}>
         <Row gap={10} style={{ alignItems: 'center' }}>
           <div style={{ color: C.textMuted }}>{m.title}</div>
@@ -146,10 +157,15 @@ function RecommendModal({ open, onClose, payload, managerId, actions, C }) {
           );
         })}
       </Col>
-      <TextArea label="Why this person, now?" value={reason} onChange={setReason} rows={4} placeholder="Specific achievements, sustained signal, leadership moments…" />
+      <div style={{ fontSize: 12, color: C.textSub, marginBottom: 10 }}>
+        Give the director specific, verifiable bullets — generic praise doesn&rsquo;t travel.
+      </div>
+      <TextArea label="Achievements — what did they actually deliver?" value={achievements} onChange={setAchievements} rows={3} placeholder="e.g. Shipped payments v2 4 weeks ahead of commit; reduced P95 latency by 42%." />
+      <TextArea label="Impact — why it matters to the business / team" value={impact} onChange={setImpact} rows={3} placeholder="e.g. Unblocked revenue from 3 enterprise customers; halved on-call load for the team." />
+      <TextArea label="Growth — what they&rsquo;ve stretched into that justifies the next level" value={growth} onChange={setGrowth} rows={3} placeholder="e.g. Led a cross-team RFC; mentored two juniors end-to-end on the refactor." />
       <Row style={{ justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="success" disabled={!reason.trim() || !target} onClick={() => { actions.recommendPromotion(m.id, managerId, reason.trim(), target); onClose(); }}>
+        <Button variant="success" disabled={!canSubmit} onClick={() => { actions.recommendPromotion(m.id, managerId, buildReason(), target); onClose(); }}>
           Send to Director
         </Button>
       </Row>

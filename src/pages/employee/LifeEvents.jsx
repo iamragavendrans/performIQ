@@ -5,6 +5,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
 import { Badge, Button, Card, Col, EmptyState, Input, Modal, Row, Select, TextArea } from '../../components/ui';
 import { formatDate, daysBetween } from '../../lib/format';
+import { lifeEventImpact, lifeEventScore } from '../../lib/compute';
 
 const TYPES = ['Medical Leave', 'Personal Emergency', 'Bereavement', 'Sabbatical', 'Parental Leave'];
 
@@ -59,8 +60,15 @@ export default function LifeEvents() {
                     </Row>
                     <div style={{ color: C.textMuted, fontSize: 12 }}>
                       {formatDate(e.start)} → {formatDate(e.end)} · {daysBetween(e.start, e.end)} days
+                      · impact ×{lifeEventImpact(e.type).toFixed(2)}
                     </div>
                     <div style={{ color: C.textMuted, fontSize: 13 }}>{e.desc}</div>
+                    {e.status === 'APPROVED' && (
+                      <div style={{ color: C.cyan, fontSize: 12, marginTop: 4 }}>
+                        Contributes {lifeEventScore(e).weightedDays.toFixed(1)} weighted days
+                        ({daysBetween(e.start, e.end)} × {lifeEventImpact(e.type).toFixed(2)}) to your empathy uplift.
+                      </div>
+                    )}
                   </Col>
                   {e.status === 'PENDING' && (
                     <Button

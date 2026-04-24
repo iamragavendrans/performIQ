@@ -35,17 +35,38 @@ export const statusOrder = (status) => ({
   [GOAL_STATUS.COMPLETED]: 3,
 }[status] ?? 4);
 
-// Life-event adjustment: +0.3% per approved day, capped at 10% uplift.
+// Per-type impact weights. Types with a heavier real-life toll weigh more.
+// Kept transparent so the system stays legible — no hidden multipliers.
+export const LIFE_EVENT_IMPACT = {
+  'Bereavement':         1.50,
+  'Medical Leave':       1.20,
+  'Personal Emergency':  1.00,
+  'Parental Leave':      1.00,
+  'Sabbatical':          0.50,
+};
+
+export const lifeEventImpact = (type) => LIFE_EVENT_IMPACT[type] ?? 1.00;
+
+export const lifeEventScore = (ev) => {
+  const days = daysBetween(ev.start, ev.end);
+  return { days, impact: lifeEventImpact(ev.type), weightedDays: days * lifeEventImpact(ev.type) };
+};
+
+// Life-event adjustment: +0.3% per weighted day (days × impact), capped at 10%.
 export const computeRating = (goals, lifeEvents = []) => {
-  if (!goals || goals.length === 0) return { raw: 0, adjusted: 0, isAdjusted: false, factor: 1 };
+  if (!goals || goals.length === 0) return { raw: 0, adjusted: 0, isAdjusted: false, factor: 1, approvedDays: 0, weightedDays: 0, upliftPoints: 0 };
   const totalWeight = goals.reduce((s, g) => s + (g.weight || 0), 0) || 1;
   const raw = goals.reduce((s, g) => s + (g.completion || 0) * (g.weight || 0), 0) / totalWeight;
-  const approvedDays = (lifeEvents || [])
-    .filter((e) => e.status === 'APPROVED')
-    .reduce((s, e) => s + daysBetween(e.start, e.end), 0);
-  const factor = Math.min(1.10, 1 + approvedDays * 0.003);
+  const approved = (lifeEvents || []).filter((e) => e.status === 'APPROVED');
+  const approvedDays = approved.reduce((s, e) => s + daysBetween(e.start, e.end), 0);
+  const weightedDays = approved.reduce((s, e) => s + lifeEventScore(e).weightedDays, 0);
+  const factor = Math.min(1.10, 1 + weightedDays * 0.003);
   const adjusted = Math.min(100, raw * factor);
-  return { raw, adjusted, isAdjusted: factor > 1, factor, approvedDays };
+  return {
+    raw, adjusted, isAdjusted: factor > 1, factor,
+    approvedDays, weightedDays,
+    upliftPoints: Math.max(0, adjusted - raw),
+  };
 };
 
 export const teamHealth = (goals) => {
