@@ -123,6 +123,15 @@ const reducer = (state, action) => {
         promotions: state.promotions.map((p) => (p.id === action.id ? { ...p, ...action.patch } : p)),
       };
 
+    case 'ADD_ONE_ON_ONE':
+      return { ...state, oneOnOnes: [...(state.oneOnOnes || []), action.oneOnOne] };
+
+    case 'UPDATE_ONE_ON_ONE':
+      return {
+        ...state,
+        oneOnOnes: (state.oneOnOnes || []).map((o) => (o.id === action.id ? { ...o, ...action.patch } : o)),
+      };
+
     case 'RESET':
       return buildInitialState();
 
@@ -425,6 +434,34 @@ export function AppProvider({ children }) {
     updateUser: (id, patch) => { dispatch({ type: 'UPDATE_USER', id, patch }); showToast('User updated'); },
     deactivateUser: (id) => { dispatch({ type: 'UPDATE_USER', id, patch: { status: 'INACTIVE' } }); showToast('User deactivated'); },
     reactivateUser: (id) => { dispatch({ type: 'UPDATE_USER', id, patch: { status: 'ACTIVE' } }); showToast('User reactivated'); },
+
+    // One-on-One --------------------------------------------------------------
+    // Either party can initiate; the other party accepts / declines. Once done
+    // the initiator can close the loop with notes.
+    requestOneOnOne: (initiatorId, withUserId, topic, proposedDate, note) => {
+      dispatch({
+        type: 'ADD_ONE_ON_ONE',
+        oneOnOne: {
+          id: genId('oo'),
+          initiatorId, withUserId, topic, proposedDate, note,
+          status: 'PENDING',
+          createdAt: new Date().toISOString().slice(0, 10),
+        },
+      });
+      showToast('1:1 request sent');
+    },
+    respondOneOnOne: (id, accept) => {
+      dispatch({ type: 'UPDATE_ONE_ON_ONE', id, patch: { status: accept ? 'ACCEPTED' : 'DECLINED' } });
+      showToast(accept ? '1:1 accepted' : '1:1 declined');
+    },
+    completeOneOnOne: (id, notes) => {
+      dispatch({ type: 'UPDATE_ONE_ON_ONE', id, patch: { status: 'DONE', notes, completedAt: new Date().toISOString().slice(0, 10) } });
+      showToast('1:1 logged');
+    },
+    cancelOneOnOne: (id) => {
+      dispatch({ type: 'UPDATE_ONE_ON_ONE', id, patch: { status: 'CANCELLED' } });
+      showToast('1:1 cancelled');
+    },
     // Director-initiated: promote an existing IC into a manager slot.
     // Queued as an admin approval; on approve, role/title/manager pointer flip.
     promoteToManager: (employeeId, newTitle, newManagerId, requestedBy) => {

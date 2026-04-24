@@ -1,5 +1,5 @@
 import { Target, Users, BarChart2, Home, LogOut, Sun, Moon, Heart, FileText,
-  Shield, Briefcase, Calendar, Layers, CheckCircle, Award, TrendingUp } from 'lucide-react';
+  Shield, Briefcase, Calendar, Layers, CheckCircle, Award, TrendingUp, MessageCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { ROLES, hasEmployeeSurface } from '../../lib/roles';
@@ -11,6 +11,7 @@ const EMPLOYEE_MENU = [
   { id: 'ai-feedback',label: 'AI Feedback', icon: TrendingUp },
   { id: 'my-rating',  label: 'My Rating',   icon: Award },
   { id: 'life-events',label: 'Life Events', icon: Heart },
+  { id: 'one-on-ones',label: '1:1s',        icon: MessageCircle },
 ];
 
 const MANAGER_MENU = [
@@ -18,6 +19,7 @@ const MANAGER_MENU = [
   { id: 'my-team',    label: 'My Team',       icon: Users },
   { id: 'goals-mgmt', label: 'Goal Mgmt',     icon: Target },
   { id: 'approvals',  label: 'Approvals',     icon: CheckCircle },
+  { id: 'one-on-ones',label: '1:1s',          icon: MessageCircle },
   { id: 'reports',    label: 'Team Report',   icon: BarChart2 },
   { id: 'promotions', label: 'Promotions',    icon: Award },
 ];
@@ -29,6 +31,7 @@ const DIRECTOR_MENU = [
   { id: 'goals-mgmt', label: 'Goal Mgmt',     icon: Target },
   { id: 'feedback',   label: 'Team Feedback', icon: TrendingUp },
   { id: 'approvals',  label: 'Approvals',     icon: CheckCircle },
+  { id: 'one-on-ones',label: '1:1s',          icon: MessageCircle },
   { id: 'promotions', label: 'Promotions',    icon: Award },
   { id: 'reports',    label: 'Org Report',    icon: FileText },
   { id: 'hierarchy',  label: 'Org Hierarchy', icon: Layers },

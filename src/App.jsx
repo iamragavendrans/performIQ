@@ -29,6 +29,7 @@ import AdminPromotions from './pages/admin/Promotions';
 import OrgReport from './pages/admin/OrgReport';
 import OrgHierarchy from './pages/director/Hierarchy';
 import DirectorFeedback from './pages/director/Feedback';
+import OneOnOnes from './pages/shared/OneOnOnes';
 
 function Router() {
   const { user, page, toast, managerMode } = useApp();
@@ -51,23 +52,25 @@ function Router() {
     }[page] || <AdminDashboard />;
   } else if (useDirectorSurface) {
     content = {
-      dashboard:    <MgrDashboard />,
-      'my-team':    <MyTeam />,
-      'goals-mgmt': <MgrGoalMgmt />,
-      approvals:    <MgrApprovals />,
-      feedback:     <DirectorFeedback />,
-      promotions:   <AdminPromotions />,
-      reports:      <OrgReport />,
-      hierarchy:    <OrgHierarchy />,
+      dashboard:     <MgrDashboard />,
+      'my-team':     <MyTeam />,
+      'goals-mgmt':  <MgrGoalMgmt />,
+      approvals:     <MgrApprovals />,
+      feedback:      <DirectorFeedback />,
+      promotions:    <AdminPromotions />,
+      reports:       <OrgReport />,
+      hierarchy:     <OrgHierarchy />,
+      'one-on-ones': <OneOnOnes />,
     }[page] || <MgrDashboard />;
   } else if (useManagerSurface) {
     content = {
-      dashboard:    <MgrDashboard />,
-      'my-team':    <MyTeam />,
-      'goals-mgmt': <MgrGoalMgmt />,
-      approvals:    <MgrApprovals />,
-      reports:      <MgrReports />,
-      promotions:   <MgrPromotions />,
+      dashboard:     <MgrDashboard />,
+      'my-team':     <MyTeam />,
+      'goals-mgmt':  <MgrGoalMgmt />,
+      approvals:     <MgrApprovals />,
+      reports:       <MgrReports />,
+      promotions:    <MgrPromotions />,
+      'one-on-ones': <OneOnOnes />,
     }[page] || <MgrDashboard />;
   } else {
     content = {
@@ -76,6 +79,7 @@ function Router() {
       'ai-feedback': <AIFeedback />,
       'my-rating':   <MyRating />,
       'life-events': <LifeEvents />,
+      'one-on-ones': <OneOnOnes />,
     }[page] || <EmpDashboard />;
   }
 

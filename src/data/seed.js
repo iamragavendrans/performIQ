@@ -287,6 +287,14 @@ const buildProgression = () => {
 
 export const INITIAL_PROGRESSION = buildProgression();
 
+// ------------ 1:1 seeds -----------------------------------------------------
+export const INITIAL_ONE_ON_ONES = [
+  { id: genId('oo'), initiatorId: 'u_qa_1', withUserId: 'u_mgr_qa', topic: 'Goal weight rebalance', proposedDate: daysAhead(3), status: 'PENDING', note: 'Want to discuss shifting Automation weight down.', createdAt: daysAgo(1) },
+  { id: genId('oo'), initiatorId: 'u_mgr_be', withUserId: 'u_be_3', topic: 'On-track check-in', proposedDate: daysAhead(5), status: 'ACCEPTED', note: 'Regular bi-weekly.', createdAt: daysAgo(2) },
+  { id: genId('oo'), initiatorId: 'u_mgr_fe', withUserId: 'u_director', topic: 'Q-roadmap alignment', proposedDate: daysAhead(7), status: 'PENDING', note: 'Want your read on the design system timeline.', createdAt: daysAgo(1) },
+  { id: genId('oo'), initiatorId: 'u_director', withUserId: 'u_mgr_qa', topic: 'Team health deep-dive', proposedDate: daysAgo(2), status: 'DONE', note: 'Health drop post-releases.', notes: 'Agreed on a 2-week stabilisation sprint. Arjun will trim roadmap scope.', completedAt: daysAgo(2), createdAt: daysAgo(6) },
+];
+
 // ------------ Full initial state --------------------------------------------
 export const buildInitialState = () => ({
   users: INITIAL_USERS.map((u) => ({ status: USER_STATUS.ACTIVE, pendingApproval: false, ...u })),
@@ -301,5 +309,6 @@ export const buildInitialState = () => ({
   promotions: INITIAL_PROMOTIONS,
   ladders: INITIAL_LADDERS,
   progression: INITIAL_PROGRESSION,
+  oneOnOnes: INITIAL_ONE_ON_ONES,
   meta: { seededAt: today() },
 });
