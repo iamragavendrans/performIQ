@@ -21,3 +21,19 @@ button:hover:not(:disabled) { filter: brightness(1.08); }
 }
 @keyframes pulseSoft { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 .perfiq-brewing-step { animation: pulseSoft 1.1s ease-in-out infinite; }
+
+/* My Rating: 3-column layout — middle column is widened to fit denser
+   text and stacks Rating history (top) over Promotion readiness (bottom).
+   Collapses to a single column on narrow screens. */
+.perfiq-rating-grid {
+  display: grid;
+  gap: 16px;
+  align-items: stretch;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.25fr) minmax(260px, 1fr);
+}
+.perfiq-rating-grid > .perfiq-span-tall { grid-row: span 2; display: flex; }
+.perfiq-rating-grid > .perfiq-span-tall > * { width: 100%; }
+@media (max-width: 960px) {
+  .perfiq-rating-grid { grid-template-columns: 1fr; }
+  .perfiq-rating-grid > .perfiq-span-tall { grid-row: auto; }
+}

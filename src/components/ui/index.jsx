@@ -61,6 +61,39 @@ export function Card({ children, onClick, style, hoverable = true }) {
   );
 }
 
+// Section card — same chrome as Card, but with the InsightCard-style label
+// that breaks the top border, plus a 3px left-border accent in the title
+// tone so the visual cue is strong even at a glance. Use this whenever a
+// card has a title so the title accent is consistent across the app.
+export function SectionCard({ label, tone, action, children, style, padding = 20 }) {
+  const { C } = useTheme();
+  const accent = tone || C.accent;
+  return (
+    <div style={{
+      position: 'relative',
+      background: C.card,
+      border: `1px solid ${C.border}`,
+      borderLeft: `3px solid ${accent}`,
+      borderRadius: 14,
+      padding,
+      ...style,
+    }}>
+      <div style={{
+        position: 'absolute', top: -9, left: 16,
+        background: C.card, padding: '0 8px',
+        color: accent, fontSize: 10, fontWeight: 700, letterSpacing: 1,
+        textTransform: 'uppercase',
+      }}>{label}</div>
+      {action && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          {action}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
 export function StatCard({ icon: Icon, label, value, trend, color }) {
   const { C } = useTheme();
   return (
@@ -278,8 +311,8 @@ export function Toast({ toast }) {
   );
 }
 
-export function Row({ children, gap = 12, style }) {
-  return <div style={{ display: 'flex', gap, alignItems: 'center', ...style }}>{children}</div>;
+export function Row({ children, gap = 12, style, onClick }) {
+  return <div onClick={onClick} style={{ display: 'flex', gap, alignItems: 'center', ...style }}>{children}</div>;
 }
 
 export function Col({ children, gap = 12, style }) {

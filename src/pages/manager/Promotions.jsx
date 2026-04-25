@@ -95,7 +95,7 @@ export default function ManagerPromotions() {
                 </Row>
                 <Col gap={6} style={{ marginTop: 14 }}>
                   <Row style={{ justifyContent: 'space-between', fontSize: 11, color: C.textMuted }}>
-                    <span>Readiness</span>
+                    <span>Promotion readiness · composite of sustained rating, initiative, and reliability</span>
                     <span style={{ color: tierColor, fontWeight: 700 }}>{elig.score}/100</span>
                   </Row>
                   <div style={{ height: 10, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
