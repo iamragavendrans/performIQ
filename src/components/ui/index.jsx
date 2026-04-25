@@ -62,16 +62,21 @@ export function Card({ children, onClick, style, hoverable = true }) {
 }
 
 // Section card — same chrome as Card, but with the InsightCard-style label
-// that breaks the top border. Use this whenever a card has a title so the
-// title accent is consistent across the app (employee + manager surfaces).
+// that breaks the top border, plus a 3px left-border accent in the title
+// tone so the visual cue is strong even at a glance. Use this whenever a
+// card has a title so the title accent is consistent across the app.
 export function SectionCard({ label, tone, action, children, style, padding = 20 }) {
   const { C } = useTheme();
   const accent = tone || C.accent;
   return (
     <div style={{
       position: 'relative',
-      background: C.card, border: `1px solid ${C.border}`, borderRadius: 14,
-      padding, ...style,
+      background: C.card,
+      border: `1px solid ${C.border}`,
+      borderLeft: `3px solid ${accent}`,
+      borderRadius: 14,
+      padding,
+      ...style,
     }}>
       <div style={{
         position: 'absolute', top: -9, left: 16,
@@ -80,9 +85,11 @@ export function SectionCard({ label, tone, action, children, style, padding = 20
         textTransform: 'uppercase',
       }}>{label}</div>
       {action && (
-        <div style={{ position: 'absolute', top: 14, right: 16 }}>{action}</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          {action}
+        </div>
       )}
-      <div style={{ marginTop: action ? 10 : 4 }}>{children}</div>
+      {children}
     </div>
   );
 }
@@ -304,8 +311,8 @@ export function Toast({ toast }) {
   );
 }
 
-export function Row({ children, gap = 12, style }) {
-  return <div style={{ display: 'flex', gap, alignItems: 'center', ...style }}>{children}</div>;
+export function Row({ children, gap = 12, style, onClick }) {
+  return <div onClick={onClick} style={{ display: 'flex', gap, alignItems: 'center', ...style }}>{children}</div>;
 }
 
 export function Col({ children, gap = 12, style }) {

@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { useCountUp } from '../../hooks/useCountUp';
 import { PageHeader } from '../../components/layout/Shell';
-import { Badge, Card, Col, Grid, InfoTooltip, ProgressBar, Row } from '../../components/ui';
+import { Badge, Card, Col, Grid, InfoTooltip, ProgressBar, Row, SectionCard } from '../../components/ui';
 import { PROMOTION, lifeEventImpact, lifeEventScore } from '../../lib/compute';
 import { promotionHowToImprove } from '../../lib/insights';
 import { buildGoalColorMap } from '../../lib/colors';
@@ -77,85 +77,60 @@ export default function MyRating() {
         />
       </Grid>
 
-      <Grid columns={2} minWidth={320}>
-        <Card hoverable={false}>
-          <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>How each goal contributes</h3>
-          {goals.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>No goals yet.</div>}
-          {topContributor && (
-            <div style={{
-              padding: 12, marginBottom: 14, borderRadius: 10,
-              background: (colorMap[topContributor.g.id] || C.accent) + '14',
-              border: `1px solid ${(colorMap[topContributor.g.id] || C.accent) + '55'}`,
-            }}>
-              <Row gap={10} style={{ alignItems: 'center' }}>
-                <Star size={16} color={colorMap[topContributor.g.id] || C.accent} />
-                <Col gap={2} style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: C.textSub, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
-                    LARGEST IMPACT
-                  </div>
-                  <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>
-                    {topContributor.g.title}
-                  </div>
-                  <div style={{ color: C.textMuted, fontSize: 12 }}>
-                    Contributes <b style={{ color: colorMap[topContributor.g.id] || C.accent }}>{topContributor.contribution.toFixed(1)}</b> points to your raw rating today
-                    ({topContributor.g.completion}% × {topContributor.g.weight}%).
-                  </div>
-                </Col>
-              </Row>
-            </div>
-          )}
-          <Col gap={12}>
-            {contributions.map(({ g, contribution }) => {
-              const color = colorMap[g.id] || C.accent;
-              return (
-                <div key={g.id}>
-                  <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Row gap={8}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: color, marginTop: 4, flexShrink: 0 }} />
-                      <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{g.title}</div>
-                    </Row>
-                    <div style={{ fontSize: 12, color: C.textMuted }}>
-                      {g.completion}% × {g.weight}% = <b style={{ color }}>{contribution.toFixed(1)}</b>
+      {/* Bottom layout: How each goal contributes (left, full height) ·
+          Rating history + Promotion readiness stacked half-height in the
+          slightly-wider middle · Life event impact (right, full height).
+          All four use SectionCard so the title-border accent is uniform. */}
+      <div className="perfiq-rating-grid">
+        <div className="perfiq-span-tall">
+          <SectionCard label="How each goal contributes">
+            {goals.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>No goals yet.</div>}
+            {topContributor && (
+              <div style={{
+                padding: 12, marginBottom: 14, borderRadius: 10,
+                background: (colorMap[topContributor.g.id] || C.accent) + '14',
+                border: `1px solid ${(colorMap[topContributor.g.id] || C.accent) + '55'}`,
+              }}>
+                <Row gap={10} style={{ alignItems: 'center' }}>
+                  <Star size={16} color={colorMap[topContributor.g.id] || C.accent} />
+                  <Col gap={2} style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: C.textSub, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
+                      LARGEST IMPACT
                     </div>
-                  </Row>
-                  <ProgressBar value={g.completion} color={color} />
-                </div>
-              );
-            })}
-          </Col>
-        </Card>
-
-        <Card hoverable={false}>
-          <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Life event impact</h3>
-          {approvedLE.length === 0
-            ? <div style={{ color: C.textMuted, fontSize: 13 }}>No approved life events this period — no adjustment applied.</div>
-            : (
-              <Col gap={10}>
-                {approvedLE.map((e) => {
-                  const s = lifeEventScore(e);
-                  return (
-                    <Row key={e.id} style={{ justifyContent: 'space-between', fontSize: 13 }}>
-                      <div>
-                        <div style={{ color: C.text, fontWeight: 600 }}>{e.type}</div>
-                        <div style={{ color: C.textMuted, fontSize: 11 }}>
-                          {formatDate(e.start)} → {formatDate(e.end)} · {s.days} days × impact {lifeEventImpact(e.type).toFixed(2)} = {s.weightedDays.toFixed(1)} weighted
-                        </div>
-                      </div>
-                      <Badge color={C.cyan} bg={C.cyanDim}>+{(s.weightedDays * 0.3).toFixed(1)} pts</Badge>
-                    </Row>
-                  );
-                })}
-                <div style={{ marginTop: 6, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
-                  Plain English: {r.approvedDays} days of approved life events, weighted by severity, converted to
-                  a <b style={{ color: C.cyan }}>+{r.upliftPoints.toFixed(1)} point</b> bonus on your rating. The bonus is capped so it can never
-                  exceed 10%.
-                </div>
-              </Col>
+                    <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>
+                      {topContributor.g.title}
+                    </div>
+                    <div style={{ color: C.textMuted, fontSize: 12 }}>
+                      Contributes <b style={{ color: colorMap[topContributor.g.id] || C.accent }}>{topContributor.contribution.toFixed(1)}</b> points to your raw rating today
+                      ({topContributor.g.completion}% × {topContributor.g.weight}%).
+                    </div>
+                  </Col>
+                </Row>
+              </div>
             )}
-        </Card>
+            <Col gap={12}>
+              {contributions.map(({ g, contribution }) => {
+                const color = colorMap[g.id] || C.accent;
+                return (
+                  <div key={g.id}>
+                    <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Row gap={8}>
+                        <span style={{ width: 10, height: 10, borderRadius: 2, background: color, marginTop: 4, flexShrink: 0 }} />
+                        <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{g.title}</div>
+                      </Row>
+                      <div style={{ fontSize: 12, color: C.textMuted }}>
+                        {g.completion}% × {g.weight}% = <b style={{ color }}>{contribution.toFixed(1)}</b>
+                      </div>
+                    </Row>
+                    <ProgressBar value={g.completion} color={color} />
+                  </div>
+                );
+              })}
+            </Col>
+          </SectionCard>
+        </div>
 
-        <Card hoverable={false}>
-          <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Rating history</h3>
+        <SectionCard label="Rating history" tone={C.cyan}>
           <Col gap={10}>
             <Row style={{ justifyContent: 'space-between', alignItems: 'center', fontSize: 13, paddingBottom: 10, borderBottom: `1px solid ${C.border}` }}>
               <div style={{ color: C.text }}>
@@ -186,13 +161,43 @@ export default function MyRating() {
               <div style={{ color: C.textSub, fontSize: 12 }}>No closed periods yet — once a period closes you&rsquo;ll see your trend here.</div>
             )}
           </Col>
-        </Card>
+        </SectionCard>
 
-        <Card hoverable={false} style={{ borderLeft: `3px solid ${eligibilityColor}` }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 style={{ color: C.text, fontSize: 16 }}>Promotion readiness</h3>
-            <Badge color={eligibilityColor} bg={eligibilityColor + '22'}>{eligibility.tier.replace('_', ' ')}</Badge>
-          </Row>
+        <div className="perfiq-span-tall">
+          <SectionCard label="Life event impact" tone={C.cyan}>
+            {approvedLE.length === 0
+              ? <div style={{ color: C.textMuted, fontSize: 13 }}>No approved life events this period — no adjustment applied.</div>
+              : (
+                <Col gap={10}>
+                  {approvedLE.map((e) => {
+                    const s = lifeEventScore(e);
+                    return (
+                      <Row key={e.id} style={{ justifyContent: 'space-between', fontSize: 13 }}>
+                        <div>
+                          <div style={{ color: C.text, fontWeight: 600 }}>{e.type}</div>
+                          <div style={{ color: C.textMuted, fontSize: 11 }}>
+                            {formatDate(e.start)} → {formatDate(e.end)} · {s.days} days × impact {lifeEventImpact(e.type).toFixed(2)} = {s.weightedDays.toFixed(1)} weighted
+                          </div>
+                        </div>
+                        <Badge color={C.cyan} bg={C.cyanDim}>+{(s.weightedDays * 0.3).toFixed(1)} pts</Badge>
+                      </Row>
+                    );
+                  })}
+                  <div style={{ marginTop: 6, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
+                    Plain English: {r.approvedDays} days of approved life events, weighted by severity, converted to
+                    a <b style={{ color: C.cyan }}>+{r.upliftPoints.toFixed(1)} point</b> bonus on your rating. The bonus is capped so it can never
+                    exceed 10%.
+                  </div>
+                </Col>
+              )}
+          </SectionCard>
+        </div>
+
+        <SectionCard
+          label="Promotion readiness"
+          tone={eligibilityColor}
+          action={<Badge color={eligibilityColor} bg={eligibilityColor + '22'}>{eligibility.tier.replace('_', ' ')}</Badge>}
+        >
           <Col gap={8}>
             <Row style={{ justifyContent: 'space-between', fontSize: 12, color: C.textMuted }}>
               <span>Composite readiness</span>
@@ -209,7 +214,7 @@ export default function MyRating() {
           {howTo.length > 0 ? (
             <div style={{ marginTop: 14, padding: 12, background: C.surface, borderRadius: 10 }}>
               <div style={{ color: C.text, fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-                {eligibility.tier === PROMOTION.ELIGIBLE ? 'To stay ready' : 'To reach &ldquo;Ready&rdquo;'}
+                {eligibility.tier === PROMOTION.ELIGIBLE ? 'To stay ready' : 'To reach “Ready”'}
               </div>
               <ul style={{ margin: 0, paddingLeft: 18, color: C.textMuted, fontSize: 12, lineHeight: 1.6 }}>
                 {howTo.map((t, i) => <li key={i}>{t}</li>)}
@@ -227,8 +232,8 @@ export default function MyRating() {
               {' '}Status: <b style={{ color: myPromotion.status === 'APPROVED' ? C.success : C.warning }}>{myPromotion.status}</b>
             </div>
           )}
-        </Card>
-      </Grid>
+        </SectionCard>
+      </div>
     </>
   );
 }
