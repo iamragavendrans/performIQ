@@ -61,6 +61,32 @@ export function Card({ children, onClick, style, hoverable = true }) {
   );
 }
 
+// Section card — same chrome as Card, but with the InsightCard-style label
+// that breaks the top border. Use this whenever a card has a title so the
+// title accent is consistent across the app (employee + manager surfaces).
+export function SectionCard({ label, tone, action, children, style, padding = 20 }) {
+  const { C } = useTheme();
+  const accent = tone || C.accent;
+  return (
+    <div style={{
+      position: 'relative',
+      background: C.card, border: `1px solid ${C.border}`, borderRadius: 14,
+      padding, ...style,
+    }}>
+      <div style={{
+        position: 'absolute', top: -9, left: 16,
+        background: C.card, padding: '0 8px',
+        color: accent, fontSize: 10, fontWeight: 700, letterSpacing: 1,
+        textTransform: 'uppercase',
+      }}>{label}</div>
+      {action && (
+        <div style={{ position: 'absolute', top: 14, right: 16 }}>{action}</div>
+      )}
+      <div style={{ marginTop: action ? 10 : 4 }}>{children}</div>
+    </div>
+  );
+}
+
 export function StatCard({ icon: Icon, label, value, trend, color }) {
   const { C } = useTheme();
   return (

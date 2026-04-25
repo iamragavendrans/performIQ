@@ -6,7 +6,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Avatar, Button, Col, Grid, ProgressBar, Row } from '../../components/ui';
+import { Avatar, Button, Col, Grid, ProgressBar, Row, SectionCard } from '../../components/ui';
 import InsightCard from '../../components/ui/InsightCard';
 import GoalsRadar from '../../components/ui/GoalsRadar';
 import { healthColor, PROMOTION, teamHealth } from '../../lib/compute';
@@ -131,11 +131,10 @@ export default function ManagerDashboard() {
 
       {/* Row 2: Team next best actions list + Promotion-ready cohort */}
       <Grid minWidth={360} style={{ marginBottom: 24 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>What will move team rating most</h3>
-            <Button variant="ghost" size="sm" onClick={() => setPage('reports')}>See analysis</Button>
-          </Row>
+        <SectionCard
+          label="What will move team rating most"
+          action={<Button variant="ghost" size="sm" onClick={() => setPage('reports')}>See analysis</Button>}
+        >
           {actions.length === 0 && (
             <div style={{ color: C.textMuted, fontSize: 13 }}>Every active team goal is at 100% — great work.</div>
           )}
@@ -162,13 +161,13 @@ export default function ManagerDashboard() {
               </div>
             ))}
           </Col>
-        </div>
+        </SectionCard>
 
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>Promotion-ready</h3>
-            <Button variant="ghost" size="sm" onClick={() => setPage('promotions', { filter: 'ELIGIBLE' })}>Open promotions</Button>
-          </Row>
+        <SectionCard
+          label="Promotion-ready"
+          tone={C.cyan}
+          action={<Button variant="ghost" size="sm" onClick={() => setPage('promotions', { filter: 'ELIGIBLE' })}>Open promotions</Button>}
+        >
           <Col gap={8}>
             <Row style={{ justifyContent: 'space-between', fontSize: 12, color: C.textMuted }}>
               <span>Eligible cohort</span>
@@ -193,16 +192,16 @@ export default function ManagerDashboard() {
               </div>
             )}
           </div>
-        </div>
+        </SectionCard>
       </Grid>
 
       {/* Row 3: Team goal portfolio (radar) + Team health list */}
       <Grid minWidth={360} style={{ marginBottom: 16 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>Team goal portfolio</h3>
-            <Button variant="ghost" size="sm" onClick={() => setPage('goals-mgmt')}>Manage goals</Button>
-          </Row>
+        <SectionCard
+          label="Team goal portfolio"
+          tone={C.purple}
+          action={<Button variant="ghost" size="sm" onClick={() => setPage('goals-mgmt')}>Manage goals</Button>}
+        >
           {teamGoals.length === 0 ? (
             <div style={{ color: C.textMuted, fontSize: 13 }}>No team goals yet.</div>
           ) : (
@@ -228,13 +227,12 @@ export default function ManagerDashboard() {
               </Col>
             </Row>
           )}
-        </div>
+        </SectionCard>
 
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>Team by member</h3>
-            <Button variant="ghost" size="sm" onClick={() => setPage('my-team')}>Full view</Button>
-          </Row>
+        <SectionCard
+          label="Team by member"
+          action={<Button variant="ghost" size="sm" onClick={() => setPage('my-team')}>Full view</Button>}
+        >
           {team.length === 0 ? (
             <div style={{ color: C.textMuted, fontSize: 13 }}>No direct reports yet.</div>
           ) : (
@@ -272,7 +270,7 @@ export default function ManagerDashboard() {
               })}
             </Col>
           )}
-        </div>
+        </SectionCard>
       </Grid>
 
       {/* Empathy uplift signal — applies when any direct report has approved life events */}
