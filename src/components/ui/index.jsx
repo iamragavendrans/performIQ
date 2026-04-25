@@ -79,8 +79,11 @@ export function SectionCard({ label, tone, action, children, style, padding = 20
       ...style,
     }}>
       <div style={{
-        position: 'absolute', top: -9, left: 16,
-        background: C.card, padding: '0 8px',
+        position: 'absolute', top: -10, left: 14,
+        background: C.card,
+        border: `1px solid ${accent}`,
+        borderRadius: 999,
+        padding: '2px 10px',
         color: accent, fontSize: 10, fontWeight: 700, letterSpacing: 1,
         textTransform: 'uppercase',
       }}>{label}</div>

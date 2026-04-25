@@ -25,6 +25,7 @@ export default function InsightCard({
         position: 'relative',
         background: C.card,
         border: `1px solid ${C.border}`,
+        borderLeft: `3px solid ${accent}`,
         borderRadius: 14,
         padding: '22px 20px 18px',
         minHeight,
@@ -35,10 +36,14 @@ export default function InsightCard({
       onMouseEnter={(e) => { if (onClick) { e.currentTarget.style.borderColor = accent; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
       onMouseLeave={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = 'translateY(0)'; } }}
     >
-      {/* Border-breaking header */}
+      {/* Border-breaking header — sits on the top border with a tinted pill so
+          the accent reads in both themes regardless of card-bg contrast. */}
       <div style={{
-        position: 'absolute', top: -9, left: 16,
-        background: C.card, padding: '0 8px',
+        position: 'absolute', top: -10, left: 14,
+        background: C.card,
+        border: `1px solid ${accent}`,
+        borderRadius: 999,
+        padding: '2px 10px',
         color: accent, fontSize: 10, fontWeight: 700, letterSpacing: 1,
         textTransform: 'uppercase',
       }}>{label}</div>

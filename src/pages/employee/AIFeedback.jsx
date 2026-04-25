@@ -11,7 +11,7 @@ import { GOAL_STATUS } from '../../lib/compute';
 import { buildGoalColorMap } from '../../lib/colors';
 import {
   bandTone, computeAlignment, computeForecast, computeMomentum, computeRisks,
-  nextBestActions,
+  nextBestActions, ratingBand,
 } from '../../lib/insights';
 import { daysLeft } from '../../lib/format';
 
@@ -24,12 +24,14 @@ const STEPS = [
 const REVEAL_AT = 1250;
 
 export default function AIFeedback() {
-  const { user, goalsFor, findUser, state, setPage } = useApp();
+  const { user, goalsFor, findUser, state, setPage, computeRatingFor } = useApp();
   const { C } = useTheme();
   const goals = useMemo(
     () => goalsFor(user.id).filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED'),
     [goalsFor, user.id]
   );
+  const rating = computeRatingFor(user.id);
+  const currentBand = ratingBand(rating.adjusted);
   const colorMap = useMemo(() => buildGoalColorMap(goals), [goals]);
   const manager = findUser(user.managerId);
   const managerGoals = user.managerId ? goalsFor(user.managerId) : [];
@@ -70,12 +72,21 @@ export default function AIFeedback() {
     .filter((g) => g.completion < 70 && g !== candidate)
     .sort((a, b) => (b.weight * (100 - b.completion)) - (a.weight * (100 - a.completion)))[0];
 
-  // Trajectory phrase: compare current adjusted vs forecast.
+  // Trajectory phrase: compare current adjusted vs forecast — describe the
+  // *gap* between today and the projection so "Projected 100" can't be read
+  // as the current state.
+  const projGain = forecast.adjusted - rating.adjusted;
   const trajPhrase =
-    forecast.adjusted - 0.5 > forecast.adjusted ? '' : // unreachable, just to silence lint
-    forecast.adjusted > 85 ? 'Ahead of expected pace — projecting Exceeds Expectations.'
-    : forecast.adjusted >= 75 ? 'On expected pace for Meets Expectations.'
-    : forecast.adjusted >= 60 ? 'Behind expected pace. A focused push will close the gap.'
+    forecast.adjusted >= 90 && projGain >= 5
+      ? `If you keep this pace, you'll lift your rating from ${rating.adjusted.toFixed(1)} today to ${forecast.adjusted.toFixed(1)} — Exceeds Expectations.`
+    : forecast.adjusted >= 90
+      ? 'Holding above the Exceeds Expectations line — keep shipping.'
+    : forecast.adjusted >= 75 && projGain >= 5
+      ? `Projected to climb from ${rating.adjusted.toFixed(1)} to ${forecast.adjusted.toFixed(1)} — Meets Expectations.`
+    : forecast.adjusted >= 75
+      ? 'Holding the Meets Expectations line — protect the weekly cadence.'
+    : forecast.adjusted >= 60
+      ? `Behind expected pace — projecting ${forecast.adjusted.toFixed(1)} vs the 75 needed to meet.`
     : 'Significantly off pace — pick one goal and rebuild momentum this week.';
 
   return (
@@ -98,13 +109,25 @@ export default function AIFeedback() {
               <div style={{ background: bandTone(forecast.band, C) + '22', padding: 10, borderRadius: 10 }}>
                 <Activity size={20} color={bandTone(forecast.band, C)} />
               </div>
-              <Col gap={2} style={{ flex: 1, minWidth: 240 }}>
+              <Col gap={4} style={{ flex: 1, minWidth: 260 }}>
                 <div style={{ color: C.textSub, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
                   TRAJECTORY SUMMARY
                 </div>
-                <div style={{ color: C.text, fontSize: 15, fontWeight: 700 }}>
-                  Projected {forecast.adjusted.toFixed(1)} — {forecast.band}
-                </div>
+                <Row gap={10} style={{ flexWrap: 'wrap', alignItems: 'baseline' }}>
+                  <span style={{ color: C.text, fontSize: 15, fontWeight: 700 }}>
+                    Currently {rating.adjusted.toFixed(1)}
+                  </span>
+                  <span style={{ color: bandTone(currentBand, C), fontSize: 11, fontWeight: 700 }}>
+                    {currentBand}
+                  </span>
+                  <span style={{ color: C.textSub, fontSize: 12 }}>→</span>
+                  <span style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>
+                    Projected {forecast.adjusted.toFixed(1)} by period end
+                  </span>
+                  <span style={{ color: bandTone(forecast.band, C), fontSize: 11, fontWeight: 700 }}>
+                    {forecast.band}
+                  </span>
+                </Row>
                 <div style={{ color: C.textMuted, fontSize: 12 }}>{trajPhrase}</div>
               </Col>
               <MomentumPill momentum={momentum} C={C} />
