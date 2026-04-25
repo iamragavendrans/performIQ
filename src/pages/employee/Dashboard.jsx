@@ -5,7 +5,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Button, Col, Grid, ProgressBar, Row } from '../../components/ui';
+import { Button, Col, Grid, ProgressBar, Row, SectionCard } from '../../components/ui';
 import InsightCard from '../../components/ui/InsightCard';
 import { GOAL_STATUS, PROMOTION, statusColor } from '../../lib/compute';
 import { formatDate, daysLeft } from '../../lib/format';
@@ -115,11 +115,10 @@ export default function EmployeeDashboard() {
 
       {/* Row 2: Next Best Actions (list) + Promotion Readiness */}
       <Grid minWidth={360} style={{ marginBottom: 24 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>What will move your rating most</h3>
-            <Button variant="ghost" size="sm" onClick={() => setPage('ai-feedback')}>See analysis</Button>
-          </Row>
+        <SectionCard
+          label="What will move your rating most"
+          action={<Button variant="ghost" size="sm" onClick={() => setPage('ai-feedback')}>See analysis</Button>}
+        >
           {actions.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>Every active goal is at 100% — great work.</div>}
           <Col gap={12}>
             {actions.map((a, i) => (
@@ -140,16 +139,18 @@ export default function EmployeeDashboard() {
               </div>
             ))}
           </Col>
-        </div>
+        </SectionCard>
 
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>Promotion readiness</h3>
+        <SectionCard
+          label="Promotion readiness"
+          tone={eligibilityColor}
+          action={
             <span style={{
               padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
               color: eligibilityColor, background: eligibilityColor + '22',
             }}>{eligibility.tier.replace('_', ' ')}</span>
-          </Row>
+          }
+        >
           <Col gap={8}>
             <Row style={{ justifyContent: 'space-between', fontSize: 12, color: C.textMuted }}>
               <span>Composite readiness</span>
@@ -183,16 +184,16 @@ export default function EmployeeDashboard() {
               You&rsquo;re hitting every readiness signal. Hold the line.
             </div>
           )}
-        </div>
+        </SectionCard>
       </Grid>
 
       {/* Row 3: Upcoming goals (urgency-sorted) + Life events */}
       <Grid minWidth={360} style={{ marginBottom: 16 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>Upcoming by urgency</h3>
-            <Button variant="ghost" size="sm" onClick={() => setPage('my-goals')}>View all</Button>
-          </Row>
+        <SectionCard
+          label="Upcoming by urgency"
+          tone={C.warning}
+          action={<Button variant="ghost" size="sm" onClick={() => setPage('my-goals')}>View all</Button>}
+        >
           {upcoming.length === 0 && (
             <div style={{ color: C.textMuted, fontSize: 13 }}>Everything in the current period is closed.</div>
           )}
@@ -216,13 +217,13 @@ export default function EmployeeDashboard() {
               );
             })}
           </Col>
-        </div>
+        </SectionCard>
 
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ color: C.text, fontSize: 15 }}>Life events</h3>
-            <Button variant="ghost" size="sm" onClick={() => setPage('life-events')}>Manage</Button>
-          </Row>
+        <SectionCard
+          label="Life events"
+          tone={C.cyan}
+          action={<Button variant="ghost" size="sm" onClick={() => setPage('life-events')}>Manage</Button>}
+        >
           {lifeEvents.length === 0 ? (
             <div style={{ padding: 14, background: C.surface, borderRadius: 10, color: C.textMuted, fontSize: 13, lineHeight: 1.5 }}>
               No life events recorded. Add one if something outside work impacted this cycle — approved events become a small empathy-aware uplift on your rating.
@@ -244,7 +245,7 @@ export default function EmployeeDashboard() {
               ))}
             </Col>
           )}
-        </div>
+        </SectionCard>
       </Grid>
 
       {rating.upliftPoints > 0.05 && (

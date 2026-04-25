@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Plus, ArrowUp } from 'lucide-react';
+import { Plus, ArrowUp, ChevronDown, ChevronRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Avatar, Badge, Button, Card, Col, Input, Modal, Row, Select } from '../../components/ui';
+import { Avatar, Button, Card, Col, Input, Modal, ProgressBar, Row, Select } from '../../components/ui';
 import { goalStatus, statusColor } from '../../lib/compute';
 import { ROLES } from '../../lib/roles';
 
@@ -14,6 +14,14 @@ export default function MyTeam() {
   const [assignOpen, setAssignOpen] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
+  // Goals are collapsed per spec to reduce cognitive load — click the member
+  // header row to toggle. Using a Set so multiple members can be opened.
+  const [openMembers, setOpenMembers] = useState(() => new Set());
+  const toggleMember = (id) => setOpenMembers((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const isDirector = user.role === ROLES.DIRECTOR;
 
   // For each member, if they themselves have reports, the avg adjusted rating of their reports.
@@ -122,25 +130,57 @@ export default function MyTeam() {
       <Col gap={12}>
         {team.map((m) => {
           const mGoals = goalsFor(m.id);
+          const open = openMembers.has(m.id);
+          const Chevron = open ? ChevronDown : ChevronRight;
           return (
             <Card key={m.id} hoverable={false}>
-              <Row style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <Row
+                style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, cursor: 'pointer' }}
+                onClick={() => toggleMember(m.id)}
+              >
                 <Row gap={10}>
+                  <Chevron size={16} color={C.textMuted} />
                   <Avatar name={m.name} color={m.avatar} size={38} />
                   <Col gap={2}>
                     <div style={{ color: C.text, fontWeight: 600 }}>{m.name}</div>
-                    <div style={{ color: C.textMuted, fontSize: 12 }}>{m.title} · {m.email}</div>
+                    <div style={{ color: C.textMuted, fontSize: 12 }}>
+                      {m.title} · {m.email} · {mGoals.length} goal{mGoals.length === 1 ? '' : 's'}
+                    </div>
                   </Col>
                 </Row>
-                <Button size="sm" icon={Plus} onClick={() => setAssignOpen(m)}>Assign goal</Button>
+                <Button
+                  size="sm" icon={Plus}
+                  onClick={(e) => { e.stopPropagation(); setAssignOpen(m); }}
+                >Assign goal</Button>
               </Row>
-              <Row gap={6} style={{ marginTop: 10, flexWrap: 'wrap' }}>
-                {mGoals.map((g) => (
-                  <Badge key={g.id} color={statusColor(goalStatus(g.completion), C)} bg={statusColor(goalStatus(g.completion), C) + '22'}>
-                    {g.title.split(' ').slice(0, 4).join(' ')}…  {g.completion}%
-                  </Badge>
-                ))}
-              </Row>
+              {open && (
+                <Col gap={8} style={{ marginTop: 12 }}>
+                  {mGoals.map((g) => {
+                    const tone = statusColor(goalStatus(g.completion), C);
+                    const contribution = ((g.completion || 0) * (g.weight || 0)) / 100;
+                    return (
+                      <div
+                        key={g.id}
+                        title={`${g.title}\nCompletion: ${g.completion}%\nWeight: ${g.weight || 0}%\nContribution to rating: ${contribution.toFixed(1)} pts`}
+                      >
+                        <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
+                          <div style={{
+                            color: C.text, fontSize: 12, fontWeight: 600, minWidth: 0,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                          }}>{g.title}</div>
+                          <div style={{ color: C.textMuted, fontSize: 11, marginLeft: 10, flexShrink: 0 }}>
+                            w {g.weight || 0}% · {g.completion}%
+                          </div>
+                        </Row>
+                        <ProgressBar value={g.completion} color={tone} />
+                      </div>
+                    );
+                  })}
+                  {mGoals.length === 0 && (
+                    <div style={{ color: C.textSub, fontSize: 12 }}>No goals assigned yet.</div>
+                  )}
+                </Col>
+              )}
             </Card>
           );
         })}

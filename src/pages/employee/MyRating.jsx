@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { useCountUp } from '../../hooks/useCountUp';
 import { PageHeader } from '../../components/layout/Shell';
-import { Badge, Card, Col, Grid, InfoTooltip, ProgressBar, Row } from '../../components/ui';
+import { Badge, Card, Col, Grid, InfoTooltip, ProgressBar, Row, SectionCard } from '../../components/ui';
 import { PROMOTION, lifeEventImpact, lifeEventScore } from '../../lib/compute';
 import { promotionHowToImprove } from '../../lib/insights';
 import { buildGoalColorMap } from '../../lib/colors';
@@ -77,26 +77,30 @@ export default function MyRating() {
         />
       </Grid>
 
-      <Grid columns={2} minWidth={320}>
-        <Card hoverable={false}>
-          <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>How each goal contributes</h3>
+      {/* Bottom layout: 2-column flow.
+          Left (wider): How each goal contributes — the densest section.
+          Right: Rating history → Life event impact → Promotion readiness,
+          stacked top-to-bottom so the page reads naturally and each card
+          has room to breathe. */}
+      <div className="perfiq-rating-grid">
+        <SectionCard label="How each goal contributes" padding={24}>
           {goals.length === 0 && <div style={{ color: C.textMuted, fontSize: 13 }}>No goals yet.</div>}
           {topContributor && (
             <div style={{
-              padding: 12, marginBottom: 14, borderRadius: 10,
+              padding: 14, marginBottom: 18, borderRadius: 10,
               background: (colorMap[topContributor.g.id] || C.accent) + '14',
               border: `1px solid ${(colorMap[topContributor.g.id] || C.accent) + '55'}`,
             }}>
               <Row gap={10} style={{ alignItems: 'center' }}>
                 <Star size={16} color={colorMap[topContributor.g.id] || C.accent} />
-                <Col gap={2} style={{ flex: 1, minWidth: 0 }}>
+                <Col gap={3} style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ color: C.textSub, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
                     LARGEST IMPACT
                   </div>
                   <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>
                     {topContributor.g.title}
                   </div>
-                  <div style={{ color: C.textMuted, fontSize: 12 }}>
+                  <div style={{ color: C.textMuted, fontSize: 12, lineHeight: 1.5 }}>
                     Contributes <b style={{ color: colorMap[topContributor.g.id] || C.accent }}>{topContributor.contribution.toFixed(1)}</b> points to your raw rating today
                     ({topContributor.g.completion}% × {topContributor.g.weight}%).
                   </div>
@@ -104,12 +108,12 @@ export default function MyRating() {
               </Row>
             </div>
           )}
-          <Col gap={12}>
+          <Col gap={14}>
             {contributions.map(({ g, contribution }) => {
               const color = colorMap[g.id] || C.accent;
               return (
                 <div key={g.id}>
-                  <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
                     <Row gap={8}>
                       <span style={{ width: 10, height: 10, borderRadius: 2, background: color, marginTop: 4, flexShrink: 0 }} />
                       <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{g.title}</div>
@@ -123,112 +127,112 @@ export default function MyRating() {
               );
             })}
           </Col>
-        </Card>
+        </SectionCard>
 
-        <Card hoverable={false}>
-          <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Life event impact</h3>
-          {approvedLE.length === 0
-            ? <div style={{ color: C.textMuted, fontSize: 13 }}>No approved life events this period — no adjustment applied.</div>
-            : (
-              <Col gap={10}>
-                {approvedLE.map((e) => {
-                  const s = lifeEventScore(e);
-                  return (
-                    <Row key={e.id} style={{ justifyContent: 'space-between', fontSize: 13 }}>
-                      <div>
-                        <div style={{ color: C.text, fontWeight: 600 }}>{e.type}</div>
-                        <div style={{ color: C.textMuted, fontSize: 11 }}>
-                          {formatDate(e.start)} → {formatDate(e.end)} · {s.days} days × impact {lifeEventImpact(e.type).toFixed(2)} = {s.weightedDays.toFixed(1)} weighted
-                        </div>
-                      </div>
-                      <Badge color={C.cyan} bg={C.cyanDim}>+{(s.weightedDays * 0.3).toFixed(1)} pts</Badge>
-                    </Row>
-                  );
-                })}
-                <div style={{ marginTop: 6, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
-                  Plain English: {r.approvedDays} days of approved life events, weighted by severity, converted to
-                  a <b style={{ color: C.cyan }}>+{r.upliftPoints.toFixed(1)} point</b> bonus on your rating. The bonus is capped so it can never
-                  exceed 10%.
+        <div className="perfiq-rating-stack">
+          <SectionCard label="Rating history" tone={C.cyan}>
+            <Col gap={12}>
+              <Row style={{ justifyContent: 'space-between', alignItems: 'center', fontSize: 13, paddingBottom: 10, borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ color: C.text }}>
+                  {state.periods.find((p) => p.isActive)?.name} <span style={{ color: C.textSub, fontSize: 11 }}>(current)</span>
                 </div>
-              </Col>
-            )}
-        </Card>
-
-        <Card hoverable={false}>
-          <h3 style={{ color: C.text, fontSize: 16, marginBottom: 14 }}>Rating history</h3>
-          <Col gap={10}>
-            <Row style={{ justifyContent: 'space-between', alignItems: 'center', fontSize: 13, paddingBottom: 10, borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ color: C.text }}>
-                {state.periods.find((p) => p.isActive)?.name} <span style={{ color: C.textSub, fontSize: 11 }}>(current)</span>
-              </div>
-              <Row gap={12} style={{ alignItems: 'center' }}>
-                <div style={{ color: C.textMuted, fontSize: 12 }}>Raw {r.raw.toFixed(1)}</div>
-                <div style={{ color: C.cyan, fontWeight: 700 }}>Adjusted {r.adjusted.toFixed(1)}</div>
-                {trendVsLast !== null && <TrendChip delta={trendVsLast} C={C} />}
-              </Row>
-            </Row>
-            {historyDesc.map((h, i) => {
-              const period = state.periods.find((p) => p.id === h.periodId);
-              const prev = historyDesc[i + 1];
-              const delta = prev ? h.adjusted - prev.adjusted : null;
-              return (
-                <Row key={h.periodId} style={{ justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                  <div style={{ color: C.text }}>{period?.name || h.periodId}</div>
-                  <Row gap={12} style={{ alignItems: 'center' }}>
-                    <div style={{ color: C.textMuted, fontSize: 12 }}>Raw {h.raw.toFixed(1)}</div>
-                    <div style={{ color: C.cyan, fontWeight: 600 }}>Adjusted {h.adjusted.toFixed(1)}</div>
-                    {delta !== null && <TrendChip delta={delta} C={C} />}
-                  </Row>
+                <Row gap={12} style={{ alignItems: 'center' }}>
+                  <div style={{ color: C.textMuted, fontSize: 12 }}>Raw {r.raw.toFixed(1)}</div>
+                  <div style={{ color: C.cyan, fontWeight: 700 }}>Adjusted {r.adjusted.toFixed(1)}</div>
+                  {trendVsLast !== null && <TrendChip delta={trendVsLast} C={C} />}
                 </Row>
-              );
-            })}
-            {historyDesc.length === 0 && (
-              <div style={{ color: C.textSub, fontSize: 12 }}>No closed periods yet — once a period closes you&rsquo;ll see your trend here.</div>
-            )}
-          </Col>
-        </Card>
+              </Row>
+              {historyDesc.map((h, i) => {
+                const period = state.periods.find((p) => p.id === h.periodId);
+                const prev = historyDesc[i + 1];
+                const delta = prev ? h.adjusted - prev.adjusted : null;
+                return (
+                  <Row key={h.periodId} style={{ justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                    <div style={{ color: C.text }}>{period?.name || h.periodId}</div>
+                    <Row gap={12} style={{ alignItems: 'center' }}>
+                      <div style={{ color: C.textMuted, fontSize: 12 }}>Raw {h.raw.toFixed(1)}</div>
+                      <div style={{ color: C.cyan, fontWeight: 600 }}>Adjusted {h.adjusted.toFixed(1)}</div>
+                      {delta !== null && <TrendChip delta={delta} C={C} />}
+                    </Row>
+                  </Row>
+                );
+              })}
+              {historyDesc.length === 0 && (
+                <div style={{ color: C.textSub, fontSize: 12 }}>No closed periods yet — once a period closes you&rsquo;ll see your trend here.</div>
+              )}
+            </Col>
+          </SectionCard>
 
-        <Card hoverable={false} style={{ borderLeft: `3px solid ${eligibilityColor}` }}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-            <h3 style={{ color: C.text, fontSize: 16 }}>Promotion readiness</h3>
-            <Badge color={eligibilityColor} bg={eligibilityColor + '22'}>{eligibility.tier.replace('_', ' ')}</Badge>
-          </Row>
-          <Col gap={8}>
-            <Row style={{ justifyContent: 'space-between', fontSize: 12, color: C.textMuted }}>
-              <span>Composite readiness</span>
-              <span style={{ color: eligibilityColor, fontWeight: 700 }}>{eligibility.score}/100</span>
-            </Row>
-            <div style={{ height: 12, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${eligibility.score}%`,
-                background: `linear-gradient(90deg, ${eligibilityColor}, ${eligibilityColor}cc)`,
-                transition: 'width 600ms ease',
-              }} />
-            </div>
-          </Col>
-          {howTo.length > 0 ? (
-            <div style={{ marginTop: 14, padding: 12, background: C.surface, borderRadius: 10 }}>
-              <div style={{ color: C.text, fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-                {eligibility.tier === PROMOTION.ELIGIBLE ? 'To stay ready' : 'To reach &ldquo;Ready&rdquo;'}
+          <SectionCard label="Life event impact" tone={C.cyan}>
+            {approvedLE.length === 0
+              ? <div style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.55 }}>No approved life events this period — no adjustment applied.</div>
+              : (
+                <Col gap={10}>
+                  {approvedLE.map((e) => {
+                    const s = lifeEventScore(e);
+                    return (
+                      <Row key={e.id} style={{ justifyContent: 'space-between', fontSize: 13 }}>
+                        <div>
+                          <div style={{ color: C.text, fontWeight: 600 }}>{e.type}</div>
+                          <div style={{ color: C.textMuted, fontSize: 11 }}>
+                            {formatDate(e.start)} → {formatDate(e.end)} · {s.days} days × impact {lifeEventImpact(e.type).toFixed(2)} = {s.weightedDays.toFixed(1)} weighted
+                          </div>
+                        </div>
+                        <Badge color={C.cyan} bg={C.cyanDim}>+{(s.weightedDays * 0.3).toFixed(1)} pts</Badge>
+                      </Row>
+                    );
+                  })}
+                  <div style={{ marginTop: 6, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted, lineHeight: 1.55 }}>
+                    Plain English: {r.approvedDays} days of approved life events, weighted by severity, converted to
+                    a <b style={{ color: C.cyan }}>+{r.upliftPoints.toFixed(1)} point</b> bonus on your rating. The bonus is capped so it can never
+                    exceed 10%.
+                  </div>
+                </Col>
+              )}
+          </SectionCard>
+
+          <SectionCard
+            label="Promotion readiness"
+            tone={eligibilityColor}
+            action={<Badge color={eligibilityColor} bg={eligibilityColor + '22'}>{eligibility.tier.replace('_', ' ')}</Badge>}
+          >
+            <Col gap={10}>
+              <Row style={{ justifyContent: 'space-between', fontSize: 12, color: C.textMuted }}>
+                <span>Composite readiness</span>
+                <span style={{ color: eligibilityColor, fontWeight: 700 }}>{eligibility.score}/100</span>
+              </Row>
+              <div style={{ height: 12, background: C.surface, borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', width: `${eligibility.score}%`,
+                  background: `linear-gradient(90deg, ${eligibilityColor}, ${eligibilityColor}cc)`,
+                  transition: 'width 600ms ease',
+                }} />
               </div>
-              <ul style={{ margin: 0, paddingLeft: 18, color: C.textMuted, fontSize: 12, lineHeight: 1.6 }}>
-                {howTo.map((t, i) => <li key={i}>{t}</li>)}
-              </ul>
-            </div>
-          ) : (
-            <div style={{ marginTop: 14, padding: 12, background: C.successDim, borderRadius: 10, color: C.text, fontSize: 12 }}>
-              You&rsquo;re hitting every readiness signal. Hold the line.
-            </div>
-          )}
-          {myPromotion && (
-            <div style={{ marginTop: 10, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted }}>
-              Your manager has recommended you for promotion on {formatDate(myPromotion.date)}.
-              {myPromotion.targetTitle && <> Target role: <b style={{ color: C.accent }}>{myPromotion.targetTitle}</b>.</>}
-              {' '}Status: <b style={{ color: myPromotion.status === 'APPROVED' ? C.success : C.warning }}>{myPromotion.status}</b>
-            </div>
-          )}
-        </Card>
-      </Grid>
+            </Col>
+            {howTo.length > 0 ? (
+              <div style={{ marginTop: 14, padding: 12, background: C.surface, borderRadius: 10 }}>
+                <div style={{ color: C.text, fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                  {eligibility.tier === PROMOTION.ELIGIBLE ? 'To stay ready' : 'To reach “Ready”'}
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, color: C.textMuted, fontSize: 12, lineHeight: 1.6 }}>
+                  {howTo.map((t, i) => <li key={i}>{t}</li>)}
+                </ul>
+              </div>
+            ) : (
+              <div style={{ marginTop: 14, padding: 12, background: C.successDim, borderRadius: 10, color: C.text, fontSize: 12 }}>
+                You&rsquo;re hitting every readiness signal. Hold the line.
+              </div>
+            )}
+            {myPromotion && (
+              <div style={{ marginTop: 10, padding: 10, background: C.surface, borderRadius: 8, fontSize: 12, color: C.textMuted, lineHeight: 1.55 }}>
+                Your manager has recommended you for promotion on {formatDate(myPromotion.date)}.
+                {myPromotion.targetTitle && <> Target role: <b style={{ color: C.accent }}>{myPromotion.targetTitle}</b>.</>}
+                {' '}Status: <b style={{ color: myPromotion.status === 'APPROVED' ? C.success : C.warning }}>{myPromotion.status}</b>
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      </div>
     </>
   );
 }
