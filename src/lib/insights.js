@@ -143,6 +143,127 @@ export const nextBestActions = (goals, max = 3) => {
     .slice(0, max);
 };
 
+// ---------------------------------------------------------------------------
+// Team-level helpers (manager perspective).
+// Same signals as the employee functions, aggregated across direct reports.
+// Scope is the only differentiator — terminology and shape stay parallel so
+// the manager dashboard can reuse the employee InsightCard pattern 1:1.
+// ---------------------------------------------------------------------------
+
+// Team Rating Forecast: average projected rating across the team.
+// Driver = the member whose forecast is currently the weakest (biggest lever).
+export const computeTeamForecast = (members, goalsFor) => {
+  if (!members.length) return { adjusted: 0, band: '—', driver: null };
+  const rows = members.map((m) => {
+    const f = computeForecast(goalsFor(m.id).filter((g) => !g.selfProposed || g.proposalStatus === 'APPROVED'));
+    return { member: m, forecast: f };
+  });
+  const adjusted = rows.reduce((s, r) => s + (r.forecast.adjusted || 0), 0) / rows.length;
+  const driver = [...rows].sort((a, b) => (a.forecast.adjusted || 0) - (b.forecast.adjusted || 0))[0];
+  return {
+    adjusted,
+    band: ratingBand(adjusted),
+    driver: driver ? {
+      memberName: driver.member.name,
+      memberId: driver.member.id,
+      adjusted: driver.forecast.adjusted,
+      band: driver.forecast.band,
+      goalTitle: driver.forecast.driver?.title || null,
+    } : null,
+  };
+};
+
+// Team Momentum: sum of points moved across all members in the last `days`.
+export const computeTeamMomentum = (members, goalsFor, days = 14) => {
+  if (!members.length) return { points: 0, direction: 'flat', goalsMoved: 0, phrase: 'No team data', topMover: null };
+  let total = 0;
+  let goalsMoved = 0;
+  const perMember = members.map((m) => {
+    const mom = computeMomentum(goalsFor(m.id), days);
+    total += mom.points;
+    goalsMoved += mom.goalsMoved;
+    return { member: m, momentum: mom };
+  });
+  const rounded = Math.round(total);
+  const direction = rounded >= 2 ? 'up' : rounded <= -2 ? 'down' : 'flat';
+  const phrase =
+    direction === 'up'   ? `+${rounded} pts across team in ${days} days` :
+    direction === 'down' ? `${rounded} pts across team in ${days} days` :
+                           'Steady — team-wide swings are minor';
+  const topMover = [...perMember].sort((a, b) => b.momentum.points - a.momentum.points)[0];
+  return { points: rounded, direction, goalsMoved, phrase, topMover };
+};
+
+// Team Risks: flatten risks across all members, severity-sorted.
+// Most urgent risk surfaces the member name so the manager can act directly.
+export const computeTeamRisks = (members, goalsFor) => {
+  const all = [];
+  members.forEach((m) => {
+    computeRisks(goalsFor(m.id)).forEach((r) => all.push({ ...r, member: m }));
+  });
+  return all.sort((a, b) => (a.severity === 'high' ? -1 : 1) - (b.severity === 'high' ? -1 : 1));
+};
+
+// Team Next Best Actions: highest-leverage goals across the team, sorted by
+// rating gain to the team if pushed to 100%. Surfaces the member to follow up.
+export const teamNextBestActions = (members, goalsFor, max = 3) => {
+  const rows = [];
+  members.forEach((m) => {
+    nextBestActions(goalsFor(m.id), 5).forEach((a) => rows.push({ ...a, member: m }));
+  });
+  return rows.sort((a, b) => b.ratingGainIfDone - a.ratingGainIfDone).slice(0, max);
+};
+
+// Team Goals Aggregate: weighted-average completion per goal id, summed across
+// all team members. Feeds GoalsRadar so the manager sees the team-shaped goal
+// portfolio at a glance. Synthetic ids prefix with `team_` to avoid clashing
+// with employee goal ids.
+export const computeTeamGoalsAggregate = (members, goalsFor) => {
+  const buckets = new Map();
+  members.forEach((m) => {
+    goalsFor(m.id).forEach((g) => {
+      if (g.selfProposed && g.proposalStatus !== 'APPROVED') return;
+      const key = g.goalId || g.id;
+      if (!buckets.has(key)) {
+        buckets.set(key, { goalId: key, title: g.title, weightSum: 0, weightedCompletion: 0, count: 0 });
+      }
+      const b = buckets.get(key);
+      const w = g.weight || 0;
+      b.weightSum += w;
+      b.weightedCompletion += (g.completion || 0) * w;
+      b.count += 1;
+    });
+  });
+  const totalWeight = [...buckets.values()].reduce((s, b) => s + b.weightSum, 0) || 1;
+  return [...buckets.values()].map((b) => {
+    const completion = b.weightSum ? Math.round(b.weightedCompletion / b.weightSum) : 0;
+    const weight = Math.round((b.weightSum / totalWeight) * 100);
+    const contribution = (completion * weight) / 100;
+    return {
+      id: `team_${b.goalId}`,
+      goalId: b.goalId,
+      title: b.title,
+      weight,
+      completion,
+      contribution,
+      count: b.count,
+    };
+  }).sort((a, b) => b.weight - a.weight);
+};
+
+// Team Health Distribution: counts of healthy / at-risk / critical members.
+// Used as a quick supporting metric on the manager dashboard.
+export const computeTeamHealthDistribution = (members, goalsFor, teamHealthFn) => {
+  let healthy = 0, atRisk = 0, critical = 0;
+  members.forEach((m) => {
+    const h = teamHealthFn(goalsFor(m.id));
+    if (h === 'Critical') critical += 1;
+    else if (h === 'At Risk') atRisk += 1;
+    else healthy += 1;
+  });
+  return { healthy, atRisk, critical, total: members.length };
+};
+
 // Promotion delta: which specific next action would move the readiness score?
 // The composite is sustained rating (50) + initiative (25) + reliability (25).
 // We can suggest the cheapest lever given the current gap.

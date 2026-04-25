@@ -3,7 +3,7 @@ import { Plus, ArrowUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../hooks/useTheme';
 import { PageHeader } from '../../components/layout/Shell';
-import { Avatar, Badge, Button, Card, Col, Input, Modal, Row, Select } from '../../components/ui';
+import { Avatar, Button, Card, Col, Input, Modal, ProgressBar, Row, Select } from '../../components/ui';
 import { goalStatus, statusColor } from '../../lib/compute';
 import { ROLES } from '../../lib/roles';
 
@@ -134,13 +134,32 @@ export default function MyTeam() {
                 </Row>
                 <Button size="sm" icon={Plus} onClick={() => setAssignOpen(m)}>Assign goal</Button>
               </Row>
-              <Row gap={6} style={{ marginTop: 10, flexWrap: 'wrap' }}>
-                {mGoals.map((g) => (
-                  <Badge key={g.id} color={statusColor(goalStatus(g.completion), C)} bg={statusColor(goalStatus(g.completion), C) + '22'}>
-                    {g.title.split(' ').slice(0, 4).join(' ')}…  {g.completion}%
-                  </Badge>
-                ))}
-              </Row>
+              <Col gap={8} style={{ marginTop: 12 }}>
+                {mGoals.map((g) => {
+                  const tone = statusColor(goalStatus(g.completion), C);
+                  const contribution = ((g.completion || 0) * (g.weight || 0)) / 100;
+                  return (
+                    <div
+                      key={g.id}
+                      title={`${g.title}\nCompletion: ${g.completion}%\nWeight: ${g.weight || 0}%\nContribution to rating: ${contribution.toFixed(1)} pts`}
+                    >
+                      <Row style={{ justifyContent: 'space-between', marginBottom: 4 }}>
+                        <div style={{
+                          color: C.text, fontSize: 12, fontWeight: 600, minWidth: 0,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                        }}>{g.title}</div>
+                        <div style={{ color: C.textMuted, fontSize: 11, marginLeft: 10, flexShrink: 0 }}>
+                          w {g.weight || 0}% · {g.completion}%
+                        </div>
+                      </Row>
+                      <ProgressBar value={g.completion} color={tone} />
+                    </div>
+                  );
+                })}
+                {mGoals.length === 0 && (
+                  <div style={{ color: C.textSub, fontSize: 12 }}>No goals assigned yet.</div>
+                )}
+              </Col>
             </Card>
           );
         })}
