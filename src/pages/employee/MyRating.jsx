@@ -169,13 +169,13 @@ export default function MyRating() {
               : (
                 <Col gap={10}>
                   {approvedLE.map((e) => {
-                    const s = lifeEventScore(e);
+                    const s = lifeEventScore(e, state.lifeEventTypes);
                     return (
                       <Row key={e.id} style={{ justifyContent: 'space-between', fontSize: 13 }}>
                         <div>
                           <div style={{ color: C.text, fontWeight: 600 }}>{e.type}</div>
                           <div style={{ color: C.textMuted, fontSize: 11 }}>
-                            {formatDate(e.start)} → {formatDate(e.end)} · {s.days} days × impact {lifeEventImpact(e.type).toFixed(2)} = {s.weightedDays.toFixed(1)} weighted
+                            {formatDate(e.start)} → {formatDate(e.end)} · {s.days} days × impact {lifeEventImpact(e.type, state.lifeEventTypes).toFixed(2)} = {s.weightedDays.toFixed(1)} weighted
                           </div>
                         </div>
                         <Badge color={C.cyan} bg={C.cyanDim}>+{(s.weightedDays * 0.3).toFixed(1)} pts</Badge>

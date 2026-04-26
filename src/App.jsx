@@ -27,6 +27,7 @@ import Groups from './pages/admin/Groups';
 import AdminApprovals from './pages/admin/Approvals';
 import AdminPromotions from './pages/admin/Promotions';
 import OrgReport from './pages/admin/OrgReport';
+import LifeEventConfig from './pages/admin/LifeEventConfig';
 import OrgHierarchy from './pages/director/Hierarchy';
 import DirectorFeedback from './pages/director/Feedback';
 import OneOnOnes from './pages/shared/OneOnOnes';
@@ -43,12 +44,14 @@ function Router() {
   let content = null;
   if (useAdminSurface) {
     content = {
-      dashboard: <AdminDashboard />,
-      users:     <UserMgmt />,
-      catalog:   <GoalCatalog />,
-      periods:   <RatingPeriods />,
-      groups:    <Groups />,
-      approvals: <AdminApprovals />,
+      dashboard:     <AdminDashboard />,
+      users:         <UserMgmt />,
+      catalog:       <GoalCatalog />,
+      periods:       <RatingPeriods />,
+      groups:        <Groups />,
+      'life-events': <LifeEventConfig />,
+      hierarchy:     <OrgHierarchy />,
+      approvals:     <AdminApprovals />,
     }[page] || <AdminDashboard />;
   } else if (useDirectorSurface) {
     content = {
@@ -59,7 +62,6 @@ function Router() {
       feedback:      <DirectorFeedback />,
       promotions:    <AdminPromotions />,
       reports:       <OrgReport />,
-      hierarchy:     <OrgHierarchy />,
       'one-on-ones': <OneOnOnes />,
     }[page] || <MgrDashboard />;
   } else if (useManagerSurface) {

@@ -7,13 +7,12 @@ import { Badge, Button, Card, Col, EmptyState, Input, Modal, Row, Select, TextAr
 import { formatDate, daysBetween } from '../../lib/format';
 import { lifeEventImpact, lifeEventScore } from '../../lib/compute';
 
-const TYPES = ['Medical Leave', 'Personal Emergency', 'Bereavement', 'Sabbatical', 'Parental Leave'];
-
 const FILTERS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED'];
 
 export default function LifeEvents() {
   const { user, state, actions, pageParams } = useApp();
   const { C } = useTheme();
+  const types = state.lifeEventTypes || [];
   const allEvents = state.lifeEvents[user.id] || [];
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState(pageParams?.filter || 'ALL');
@@ -77,13 +76,13 @@ export default function LifeEvents() {
                     </Row>
                     <div style={{ color: C.textMuted, fontSize: 12 }}>
                       {formatDate(e.start)} → {formatDate(e.end)} · {daysBetween(e.start, e.end)} days
-                      · impact ×{lifeEventImpact(e.type).toFixed(2)}
+                      · impact ×{lifeEventImpact(e.type, types).toFixed(2)}
                     </div>
                     <div style={{ color: C.textMuted, fontSize: 13 }}>{e.desc}</div>
                     {e.status === 'APPROVED' && (
                       <div style={{ color: C.cyan, fontSize: 12, marginTop: 4 }}>
-                        Contributes {lifeEventScore(e).weightedDays.toFixed(1)} weighted days
-                        ({daysBetween(e.start, e.end)} × {lifeEventImpact(e.type).toFixed(2)}) to your empathy uplift.
+                        Contributes {lifeEventScore(e, types).weightedDays.toFixed(1)} weighted days
+                        ({daysBetween(e.start, e.end)} × {lifeEventImpact(e.type, types).toFixed(2)}) to your empathy uplift.
                       </div>
                     )}
                   </Col>
@@ -99,13 +98,14 @@ export default function LifeEvents() {
           </Col>
         )}
 
-      <RecordModal open={open} onClose={() => setOpen(false)} onSubmit={(ev) => { actions.addLifeEvent(user.id, ev); setOpen(false); }} />
+      <RecordModal open={open} onClose={() => setOpen(false)} types={types} onSubmit={(ev) => { actions.addLifeEvent(user.id, ev); setOpen(false); }} />
     </>
   );
 }
 
-function RecordModal({ open, onClose, onSubmit }) {
-  const [type, setType] = useState(TYPES[0]);
+function RecordModal({ open, onClose, onSubmit, types }) {
+  const typeNames = types.map((t) => t.name);
+  const [type, setType] = useState(typeNames[0] || '');
   const [desc, setDesc] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -113,14 +113,14 @@ function RecordModal({ open, onClose, onSubmit }) {
   // Live preview of estimated uplift while the user fills the form. Same math
   // as computeRating: 0.3 pts per (days × type impact), capped at 10.
   const days = (start && end) ? Math.max(0, daysBetween(start, end)) : 0;
-  const impact = lifeEventImpact(type);
+  const impact = lifeEventImpact(type, types);
   const weighted = days * impact;
   const upliftPts = Math.min(10, weighted * 0.3);
   const datesValid = !start || !end || new Date(end) >= new Date(start);
 
   return (
     <Modal open={open} onClose={onClose} title="Record a life event">
-      <Select label="Type" value={type} onChange={setType} options={TYPES.map((t) => ({ value: t, label: `${t} (impact ×${lifeEventImpact(t).toFixed(2)})` }))} />
+      <Select label="Type" value={type} onChange={setType} options={typeNames.map((t) => ({ value: t, label: `${t} (impact ×${lifeEventImpact(t, types).toFixed(2)})` }))} />
       <TextArea label="Description" value={desc} onChange={setDesc} placeholder="Brief context, shared only with your manager." />
       <Row gap={10}>
         <div style={{ flex: 1 }}><Input label="Start date" type="date" value={start} onChange={setStart} /></div>

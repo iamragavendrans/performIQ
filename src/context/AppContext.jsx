@@ -91,11 +91,40 @@ const reducer = (state, action) => {
     case 'ADD_CATALOG_GOAL':
       return { ...state, goalsCatalog: [...state.goalsCatalog, action.goal] };
 
-    case 'ADD_USER':
-      return { ...state, users: [...state.users, action.user], passwords: { ...state.passwords, [action.user.email]: 'Demo1234!' } };
+    case 'UPDATE_CATALOG_GOAL':
+      return {
+        ...state,
+        goalsCatalog: state.goalsCatalog.map((g) => (g.id === action.id ? { ...g, ...action.patch } : g)),
+      };
 
-    case 'UPDATE_USER':
-      return { ...state, users: state.users.map((u) => (u.id === action.id ? { ...u, ...action.patch } : u)) };
+    case 'REMOVE_CATALOG_GOAL':
+      return {
+        ...state,
+        goalsCatalog: state.goalsCatalog.filter((g) => g.id !== action.id),
+      };
+
+    case 'ADD_USER': {
+      const email = (action.user.email || '').toLowerCase();
+      return {
+        ...state,
+        users: [...state.users, { ...action.user, email }],
+        passwords: { ...state.passwords, [email]: 'Demo1234!' },
+      };
+    }
+
+    case 'UPDATE_USER': {
+      const existing = state.users.find((u) => u.id === action.id);
+      const next = { ...state, users: state.users.map((u) => (u.id === action.id ? { ...u, ...action.patch } : u)) };
+      // Email is the login key, so the password map must follow rename.
+      if (existing && action.patch.email && action.patch.email !== existing.email) {
+        const newEmail = action.patch.email.toLowerCase();
+        const oldPwd = state.passwords[existing.email] ?? 'Demo1234!';
+        const passwords = { ...state.passwords, [newEmail]: oldPwd };
+        delete passwords[existing.email];
+        next.passwords = passwords;
+      }
+      return next;
+    }
 
     case 'ADD_PERIOD':
       return { ...state, periods: [...state.periods, action.period] };
@@ -135,6 +164,21 @@ const reducer = (state, action) => {
     case 'ADD_FEEDBACK':
       return { ...state, feedback: [...(state.feedback || []), action.feedback] };
 
+    case 'ADD_LIFE_EVENT_TYPE':
+      return { ...state, lifeEventTypes: [...(state.lifeEventTypes || []), action.lifeEventType] };
+
+    case 'UPDATE_LIFE_EVENT_TYPE':
+      return {
+        ...state,
+        lifeEventTypes: (state.lifeEventTypes || []).map((t) => (t.id === action.id ? { ...t, ...action.patch } : t)),
+      };
+
+    case 'REMOVE_LIFE_EVENT_TYPE':
+      return {
+        ...state,
+        lifeEventTypes: (state.lifeEventTypes || []).filter((t) => t.id !== action.id),
+      };
+
     case 'RESET':
       return buildInitialState();
 
@@ -168,15 +212,16 @@ export function AppProvider({ children }) {
 
   // --- Auth ----------------------------------------------------------------
   const login = useCallback((email, password) => {
-    const u = state.users.find((x) => x.email === email);
-    if (u && state.passwords[email] === password) {
-      setUser(u);
-      setPage('dashboard');
-      // Managers/Directors default to manager surface on login.
-      setManagerMode(u.role === ROLES.MANAGER || u.role === ROLES.DIRECTOR);
-      return true;
-    }
-    return false;
+    const key = (email || '').trim().toLowerCase();
+    const u = state.users.find((x) => x.email?.toLowerCase() === key);
+    if (!u || state.passwords[key] !== password) return { ok: false, reason: 'invalid' };
+    if (u.status === 'INACTIVE') return { ok: false, reason: 'inactive' };
+    if (u.pendingApproval) return { ok: false, reason: 'pending' };
+    setUser(u);
+    setPage('dashboard');
+    // Managers/Directors default to manager surface on login.
+    setManagerMode(u.role === ROLES.MANAGER || u.role === ROLES.DIRECTOR);
+    return { ok: true };
   }, [state.users, state.passwords, setPage]);
 
   const logout = useCallback(() => { setUser(null); setPage('dashboard'); }, [setPage]);
@@ -405,12 +450,19 @@ export function AppProvider({ children }) {
     // lands the user in state with pendingApproval=true and queues a NEW_USER
     // admin approval. decideApproval flips or removes.
     addUser: (user, requestedBy = ROLES.ADMIN) => {
+      const emailKey = (user.email || '').trim().toLowerCase();
+      const duplicate = state.users.some((u) => u.email?.toLowerCase() === emailKey);
+      if (!emailKey || duplicate) {
+        showToast(duplicate ? 'A user with that email already exists' : 'Email is required', 'error');
+        return null;
+      }
       const id = genId('u');
       const needsApproval = requestedBy !== ROLES.ADMIN;
       const record = {
         status: 'ACTIVE',
         pendingApproval: needsApproval,
         ...user,
+        email: emailKey,
         id,
       };
       dispatch({ type: 'ADD_USER', user: record });
@@ -428,9 +480,9 @@ export function AppProvider({ children }) {
             detail: `${requestedBy} added ${user.name} (${user.role}${user.title ? ' — ' + user.title : ''})`,
           },
         });
-        showToast('User added — pending admin approval', 'warning');
+        showToast('User added — pending admin approval. Temp password: Demo1234!', 'warning');
       } else {
-        showToast('User added');
+        showToast('User added. They can sign in with Demo1234!');
       }
       return id;
     },
@@ -502,6 +554,11 @@ export function AppProvider({ children }) {
       showToast('Promotion to manager submitted for admin approval', 'warning');
     },
     addCatalogGoal: (goal) => { dispatch({ type: 'ADD_CATALOG_GOAL', goal: { ...goal, id: genId('g') } }); showToast('Goal added to catalog'); },
+    updateCatalogGoal: (id, patch) => { dispatch({ type: 'UPDATE_CATALOG_GOAL', id, patch }); showToast('Goal updated'); },
+    removeCatalogGoal: (id) => { dispatch({ type: 'REMOVE_CATALOG_GOAL', id }); showToast('Goal removed from catalog'); },
+    addLifeEventType: (type) => { dispatch({ type: 'ADD_LIFE_EVENT_TYPE', lifeEventType: { ...type, id: genId('let') } }); showToast('Life event type added'); },
+    updateLifeEventType: (id, patch) => { dispatch({ type: 'UPDATE_LIFE_EVENT_TYPE', id, patch }); showToast('Life event type updated'); },
+    removeLifeEventType: (id) => { dispatch({ type: 'REMOVE_LIFE_EVENT_TYPE', id }); showToast('Life event type removed'); },
     addPeriod: (period) => { dispatch({ type: 'ADD_PERIOD', period: { ...period, id: genId('p') } }); showToast('Period added'); },
     updatePeriod: (id, patch) => { dispatch({ type: 'UPDATE_PERIOD', id, patch }); showToast('Period updated'); },
     addGroup: (group) => { dispatch({ type: 'ADD_GROUP', group: { ...group, id: genId('grp') } }); showToast('Group added'); },
@@ -514,7 +571,11 @@ export function AppProvider({ children }) {
     toast, showToast,
     login, logout,
     findUser, teamFor, goalTitle, goalsFor, eligibilityFor, activePeriod,
-    computeRatingFor: (userId) => computeRating(goalsFor(userId).filter((g) => !g.selfProposed || g.proposalStatus === APPROVAL_STATUS.APPROVED), state.lifeEvents[userId] || []),
+    computeRatingFor: (userId) => computeRating(
+      goalsFor(userId).filter((g) => !g.selfProposed || g.proposalStatus === APPROVAL_STATUS.APPROVED),
+      state.lifeEvents[userId] || [],
+      state.lifeEventTypes,
+    ),
     actions,
   };
 

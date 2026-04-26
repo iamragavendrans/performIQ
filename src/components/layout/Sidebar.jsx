@@ -34,7 +34,6 @@ const DIRECTOR_MENU = [
   { id: 'one-on-ones',label: '1:1s',          icon: MessageCircle },
   { id: 'promotions', label: 'Promotions',    icon: Award },
   { id: 'reports',    label: 'Org Report',    icon: FileText },
-  { id: 'hierarchy',  label: 'Org Hierarchy', icon: Layers },
 ];
 
 const ADMIN_MENU = [
@@ -43,6 +42,8 @@ const ADMIN_MENU = [
   { id: 'catalog',    label: 'Goal Catalog',  icon: Target },
   { id: 'periods',    label: 'Rating Periods',icon: Calendar },
   { id: 'groups',     label: 'Groups',        icon: Layers },
+  { id: 'life-events',label: 'Life Events',   icon: Heart },
+  { id: 'hierarchy',  label: 'Org Hierarchy', icon: Layers },
   { id: 'approvals',  label: 'Approvals',     icon: Shield },
 ];
 

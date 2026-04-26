@@ -28,7 +28,11 @@ export default function Login() {
 
   const submit = (ev) => {
     ev.preventDefault();
-    if (!login(email, password)) setError('Invalid credentials. Try a demo account; password is Demo1234!');
+    const res = login(email, password);
+    if (res.ok) return;
+    if (res.reason === 'inactive') setError('This account has been deactivated. Contact your admin.');
+    else if (res.reason === 'pending') setError('Your account is awaiting admin approval.');
+    else setError('Invalid credentials. Try a demo account; password is Demo1234!');
   };
 
   return (

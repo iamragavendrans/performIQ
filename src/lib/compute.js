@@ -36,7 +36,8 @@ export const statusOrder = (status) => ({
 }[status] ?? 4);
 
 // Per-type impact weights. Types with a heavier real-life toll weigh more.
-// Kept transparent so the system stays legible — no hidden multipliers.
+// These are baked-in defaults; admins can override per-type via the
+// Admin → Life Events config page (state.lifeEventTypes).
 export const LIFE_EVENT_IMPACT = {
   'Bereavement':         1.50,
   'Medical Leave':       1.20,
@@ -45,21 +46,30 @@ export const LIFE_EVENT_IMPACT = {
   'Sabbatical':          0.50,
 };
 
-export const lifeEventImpact = (type) => LIFE_EVENT_IMPACT[type] ?? 1.00;
+// When a `types` array (from state.lifeEventTypes) is provided, use it as the
+// source of truth so admin-configured values take effect immediately.
+export const lifeEventImpact = (type, types) => {
+  if (Array.isArray(types)) {
+    const match = types.find((t) => t.name === type);
+    if (match) return match.impact;
+  }
+  return LIFE_EVENT_IMPACT[type] ?? 1.00;
+};
 
-export const lifeEventScore = (ev) => {
+export const lifeEventScore = (ev, types) => {
   const days = daysBetween(ev.start, ev.end);
-  return { days, impact: lifeEventImpact(ev.type), weightedDays: days * lifeEventImpact(ev.type) };
+  const impact = lifeEventImpact(ev.type, types);
+  return { days, impact, weightedDays: days * impact };
 };
 
 // Life-event adjustment: +0.3% per weighted day (days × impact), capped at 10%.
-export const computeRating = (goals, lifeEvents = []) => {
+export const computeRating = (goals, lifeEvents = [], types) => {
   if (!goals || goals.length === 0) return { raw: 0, adjusted: 0, isAdjusted: false, factor: 1, approvedDays: 0, weightedDays: 0, upliftPoints: 0 };
   const totalWeight = goals.reduce((s, g) => s + (g.weight || 0), 0) || 1;
   const raw = goals.reduce((s, g) => s + (g.completion || 0) * (g.weight || 0), 0) / totalWeight;
   const approved = (lifeEvents || []).filter((e) => e.status === 'APPROVED');
   const approvedDays = approved.reduce((s, e) => s + daysBetween(e.start, e.end), 0);
-  const weightedDays = approved.reduce((s, e) => s + lifeEventScore(e).weightedDays, 0);
+  const weightedDays = approved.reduce((s, e) => s + lifeEventScore(e, types).weightedDays, 0);
   const factor = Math.min(1.10, 1 + weightedDays * 0.003);
   const adjusted = Math.min(100, raw * factor);
   return {

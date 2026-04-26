@@ -69,7 +69,7 @@ const FE_TEAM = employees('u_mgr_fe', 'Frontend Developer', 'Engineering', [
 export const INITIAL_USERS = [ADMIN, DIRECTOR, ...MANAGERS, ...QA_TEAM, ...BE_TEAM, ...FE_TEAM];
 
 export const INITIAL_PASSWORDS = Object.fromEntries(
-  INITIAL_USERS.map((u) => [u.email, 'Demo1234!'])
+  INITIAL_USERS.map((u) => [u.email.toLowerCase(), 'Demo1234!'])
 );
 
 // ------------ Periods -------------------------------------------------------
@@ -301,6 +301,17 @@ export const INITIAL_FEEDBACK = [
     createdAt: daysAgo(6) },
 ];
 
+// ------------ Life event types ----------------------------------------------
+// Configurable via the Admin → Life Events page. Impact is the per-day
+// multiplier used by compute.js when calculating empathy uplift.
+export const INITIAL_LIFE_EVENT_TYPES = [
+  { id: 'let_bereavement',   name: 'Bereavement',         impact: 1.50 },
+  { id: 'let_medical',       name: 'Medical Leave',       impact: 1.20 },
+  { id: 'let_personal',      name: 'Personal Emergency',  impact: 1.00 },
+  { id: 'let_parental',      name: 'Parental Leave',      impact: 1.00 },
+  { id: 'let_sabbatical',    name: 'Sabbatical',          impact: 0.50 },
+];
+
 export const INITIAL_ONE_ON_ONES = [
   { id: genId('oo'), initiatorId: 'u_qa_1', withUserId: 'u_mgr_qa', topic: 'Goal weight rebalance', proposedDate: daysAhead(3), status: 'PENDING', note: 'Want to discuss shifting Automation weight down.', createdAt: daysAgo(1) },
   { id: genId('oo'), initiatorId: 'u_mgr_be', withUserId: 'u_be_3', topic: 'On-track check-in', proposedDate: daysAhead(5), status: 'ACCEPTED', note: 'Regular bi-weekly.', createdAt: daysAgo(2) },
@@ -324,5 +335,6 @@ export const buildInitialState = () => ({
   progression: INITIAL_PROGRESSION,
   oneOnOnes: INITIAL_ONE_ON_ONES,
   feedback: INITIAL_FEEDBACK,
+  lifeEventTypes: INITIAL_LIFE_EVENT_TYPES,
   meta: { seededAt: today() },
 });

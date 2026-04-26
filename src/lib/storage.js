@@ -1,6 +1,6 @@
 // Versioned localStorage persistence. Bump SCHEMA_VERSION to force a reseed.
 export const STORAGE_KEY = 'performiq:v1';
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const loadState = () => {
   try {

@@ -149,13 +149,19 @@ function AddUserModal({ open, onClose, state, actions }) {
       <Select label="Role" value={role} onChange={setRole} options={Object.values(ROLES).map((r) => ({ value: r, label: r }))} />
       <Select label="Group / team" value={group} onChange={setGroup} options={state.groups.map((g) => ({ value: g.name, label: g.name }))} />
       {requiresManager && <Select label="Manager" value={managerId} onChange={setManagerId} options={managerOptions} />}
+      <div style={{
+        padding: 10, background: 'rgba(91,141,239,0.10)', border: '1px solid rgba(91,141,239,0.35)',
+        borderRadius: 8, fontSize: 12, marginBottom: 12, lineHeight: 1.5,
+      }}>
+        The new user signs in with their email and the temporary password <b>Demo1234!</b>. Share this so they can access their account.
+      </div>
       <Row style={{ justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button
           disabled={!name || !emailOk || !managerOk}
           onClick={() => {
-            actions.addUser({ name, email, role, group, managerId: managerId || null, dept: 'Engineering', avatar: '#5b8def', title: role }, ROLES.ADMIN);
-            onClose();
+            const id = actions.addUser({ name, email, role, group, managerId: managerId || null, dept: 'Engineering', avatar: '#5b8def', title: role }, ROLES.ADMIN);
+            if (id) onClose();
           }}
         >Create</Button>
       </Row>
